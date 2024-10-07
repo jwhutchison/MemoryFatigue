@@ -1,7 +1,7 @@
 #pragma once
 
 #include "KittyUtils.hpp"
-#include <functional>
+#include <functional> // Added this line for std::function
 
 class KittyIOFile
 {

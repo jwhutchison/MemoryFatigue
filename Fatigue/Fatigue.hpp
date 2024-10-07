@@ -1,33 +1,22 @@
 #pragma once
 
 #include <cstdint>
+#include "KittyMemoryEx.hpp"
 
-struct DosHeader {
-	uint16_t magic;
-	uint8_t ignored[58];
-	int32_t coff_header_offset;
-};
+namespace Fatigue {
+    // Proxy to KittyMemoryEx namespace
+    using namespace KittyMemoryEx;
 
-struct CoffHeader {
-	uint32_t signature;
-	uint16_t machine;
-	uint16_t number_of_sections;
-	uint32_t time_date_stamp;
-	uint32_t pointer_to_symbol_table;
-	uint32_t number_of_symbols;
-	uint16_t size_of_optional_header;
-	uint16_t characteristics;
-};
+    /**
+     * Get process name by PID from /proc/[pid]/status
+     * Typically, this is just the executable name without the path.
+     * For example, Windows processes would be just the name of the exe file, like "explorer.exe"
+     */
+    std::string getProcessStatusName(pid_t pid);
 
-struct CoffOptionalHeader {
-	uint16_t magic;
-	uint8_t ignored[104];
-	uint16_t number_of_rva_and_sizes;
-};
-
-struct SectionHeader {
-	char name[8];
-	uint32_t virtual_size;
-	uint32_t virtual_address;
-	uint8_t ignored[24];
-};
+    // KittyMemoryEx::getProcessID actually checks == /proc/[pid]/cmdline, so add some more flexible helpers.
+    pid_t getProcessIDByComparator(const std::string &processName, bool (*comparator)(const std::string &, const int));
+    pid_t getProcessIDByStatusName(const std::string &processName);
+    pid_t getProcessIDByCmdlineEndsWith(const std::string &processName);
+    pid_t getProcessIDByCmdlineContains(const std::string &processName);
+}
