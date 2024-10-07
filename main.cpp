@@ -26,7 +26,7 @@ int main(int argc, char *args[])
         return 1;
     }
 
-    std::string processCmd = Fatigue::getProcessName(processID);
+    std::string processCmd = getProcessName(processID);
 
     KITTY_LOGI("Process Name: %s", processName.c_str());
     KITTY_LOGI("Process ID:   %d", processID);
@@ -45,14 +45,14 @@ int main(int argc, char *args[])
     Win32::ProcSection *textSection = nullptr;
 
     if (processMap) {
-        KITTY_LOGI("Found map: %s\n", processMap->toString().c_str());
-        // textSection = processMap->getSection(".text");
+        KITTY_LOGI("Found map: %s", processMap->toString().c_str());
+        textSection = processMap->getSection(".text");
     }
 
     KITTY_LOGI("================ FIND TEXT SECTION ===============");
 
     if (textSection && textSection->isValid()) {
-        KITTY_LOGI("Found text section: \"%s\"\n", textSection->getName().c_str());
+        KITTY_LOGI("Found text section: \"%s\"", textSection->getName().c_str());
 
         uintptr_t search_start = textSection->getStartAddress();
         uintptr_t search_end = textSection->getEndAddress();

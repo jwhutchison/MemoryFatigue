@@ -29,7 +29,7 @@ namespace Fatigue::Win32 {
 
         ProcMap *processMap = nullptr;
 
-        KITTY_LOGI("Looking for process map of %s with pid %d", processName.c_str(), pid);
+        // KITTY_LOGI("Looking for process map of %s with pid %d", processName.c_str(), pid);
 
         // Find the correct map. We are looking for a valid map that belongs to the actual executable
         std::vector<Fatigue::ProcMap> maps = Fatigue::getAllMaps(pid);
@@ -73,10 +73,14 @@ namespace Fatigue::Win32 {
                 currentOffset += sizeof(CoffHeader);
 
                 // Read COFF optional header, and check PE32+ magic number
+                std::size_t optionalHeaderSize = std::min(
+                    // Do not read more than the size of the optional header, but also no more than the size of the struct
+                    static_cast<std::size_t>(coff_header.size_of_optional_header),
+                    sizeof(CoffOptionalHeader)
+                );
                 struct CoffOptionalHeader coff_optional_header = {0};
-break; // Stack smashing here
-                bytesRead = manager.readMem(it.startAddress + currentOffset, &coff_optional_header, coff_header.size_of_optional_header);
-                if (bytesRead != coff_header.size_of_optional_header) {
+                bytesRead = manager.readMem(it.startAddress + currentOffset, &coff_optional_header, optionalHeaderSize);
+                if (bytesRead != optionalHeaderSize) {
                     KITTY_LOGE("Failed to read COFF optional header from region at %p for pid %ul", (void *)it.startAddress, pid);
                     continue;
                 }
@@ -96,11 +100,11 @@ break; // Stack smashing here
                 }
 
                 // At this point, we have found the correct map
-                // processMap = new ProcMap();
-                // processMap->dos_header = dos_header;
-                // processMap->coff_header = coff_header;
-                // processMap->coff_optional_header = coff_optional_header;
-                // processMap->section_headers = section_headers;
+                processMap = new ProcMap(it);
+                processMap->dos_header = dos_header;
+                processMap->coff_header = coff_header;
+                processMap->coff_optional_header = coff_optional_header;
+                processMap->section_headers = section_headers;
                 break;
             }
         }

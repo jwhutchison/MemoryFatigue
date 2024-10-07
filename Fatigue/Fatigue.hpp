@@ -14,6 +14,12 @@ namespace Fatigue {
      */
     std::string getProcessStatusName(pid_t pid);
 
+    /**
+     * Get process cmline by PID from /proc/[pid]/cmdline
+     * Alias for KittyMemoryEx::getProcessName
+     */
+    constexpr auto getProcessCmdline = KittyMemoryEx::getProcessName;
+
     // KittyMemoryEx::getProcessID actually checks == /proc/[pid]/cmdline, so add some more flexible helpers.
     pid_t getProcessIDByComparator(const std::string &processName, bool (*comparator)(const std::string &, const int));
     pid_t getProcessIDByStatusName(const std::string &processName);

@@ -1,6 +1,9 @@
 #include "Fatigue.hpp"
 
 namespace Fatigue::Win32 {
+    // PE file structures
+    // See https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
+
     struct DosHeader {
         uint16_t magic;
         uint8_t ignored[58];
