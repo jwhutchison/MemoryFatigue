@@ -3,8 +3,8 @@
 #include <thread>
 #include <vector>
 
-#include "../KittyMemoryEx/KittyMemoryEx/KittyMemoryMgr.hpp"
-#include "common.h"
+#include "KittyMemoryEx/KittyMemoryMgr.hpp"
+#include "Fatigue/Fatigue.hpp"
 
 KittyMemoryMgr kittyMemMgr;
 
@@ -119,7 +119,7 @@ int main(int argc, char *args[])
 
     // Find map, get section by name
     ProcMap *processMap = nullptr;
-    section_header textSection = {0};
+    SectionHeader textSection = {0};
 
     for (auto &it : maps) {
         // Find the correct map
@@ -133,9 +133,9 @@ int main(int argc, char *args[])
             std::size_t currentOffset = 0;
 
             // Read DOS header, and check if it's a DOS executable
-            struct dos_header dos_header = {0};
-            bytesRead = kittyMemMgr.readMem(it.startAddress, &dos_header, sizeof(dos_header));
-            if (bytesRead != sizeof(dos_header)) {
+            struct DosHeader dos_header = {0};
+            bytesRead = kittyMemMgr.readMem(it.startAddress, &dos_header, sizeof(DosHeader));
+            if (bytesRead != sizeof(DosHeader)) {
                 // KITTY_LOGE("Failed to read DOS header from region at %p", (void *)it.startAddress);
                 continue;
             }
@@ -147,9 +147,9 @@ int main(int argc, char *args[])
             currentOffset = dos_header.coff_header_offset;
 
             // Read COFF header, and check PE signature
-            struct coff_header coff_header = {0};
-            bytesRead = kittyMemMgr.readMem(it.startAddress + currentOffset, &coff_header, sizeof(coff_header));
-            if (bytesRead != sizeof(coff_header)) {
+            struct CoffHeader coff_header = {0};
+            bytesRead = kittyMemMgr.readMem(it.startAddress + currentOffset, &coff_header, sizeof(CoffHeader));
+            if (bytesRead != sizeof(CoffHeader)) {
                 KITTY_LOGE("Failed to read COFF header from region at %p", (void *)(it.startAddress));
                 continue;
             }
@@ -158,10 +158,10 @@ int main(int argc, char *args[])
                 continue;
             }
 
-            currentOffset += sizeof(coff_header);
+            currentOffset += sizeof(CoffHeader);
 
             // Read COFF optional header, and check if it's a 32-bit executable
-            struct coff_optional_header coff_optional_header = {0};
+            struct CoffOptionalHeader coff_optional_header = {0};
             bytesRead = kittyMemMgr.readMem(it.startAddress + currentOffset, &coff_optional_header, coff_header.size_of_optional_header);
             if (bytesRead != coff_header.size_of_optional_header) {
                 KITTY_LOGE("Failed to read COFF optional header from region at %p", (void *)(it.startAddress));
@@ -175,10 +175,10 @@ int main(int argc, char *args[])
             currentOffset += coff_header.size_of_optional_header;
 
             // Read section headers
-            std::vector<section_header> section_headers(coff_header.number_of_sections);
-            bytesRead = kittyMemMgr.readMem(it.startAddress + currentOffset, section_headers.data(), sizeof(section_header) * coff_header.number_of_sections);
+            std::vector<SectionHeader> section_headers(coff_header.number_of_sections);
+            bytesRead = kittyMemMgr.readMem(it.startAddress + currentOffset, section_headers.data(), sizeof(SectionHeader) * coff_header.number_of_sections);
 
-            if (bytesRead != sizeof(section_header) * coff_header.number_of_sections) {
+            if (bytesRead != sizeof(SectionHeader) * coff_header.number_of_sections) {
                 KITTY_LOGE("Failed to read section headers from region at %p", (void *)(it.startAddress));
                 continue;
             }

@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(KittyMemoryExExample)
+project(MemoryFatigue)
 
-set(KITTYMEMORY_PATH ../KittyMemoryEx/KittyMemoryEx)
+set(KITTYMEMORY_PATH KittyMemoryEx)
 FILE(GLOB KITTYMEMORY_SRC ${KITTYMEMORY_PATH}/*.cpp)
+
+set(FATIGUE_PATH Fatigue)
+FILE(GLOB SOURCES ${FATIGUE_PATH}/*.cpp)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
@@ -16,4 +19,5 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -std=c++20 -DkNO_KEYSTONE")
 add_executable(
     fatigue
     main.cpp
+    ${SOURCES}
     ${KITTYMEMORY_SRC})
