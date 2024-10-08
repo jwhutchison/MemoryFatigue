@@ -2,8 +2,9 @@
 
 #include <cstdint>
 #include "KittyMemoryEx.hpp"
+#include "KittyMemoryMgr.hpp"
 
-namespace Fatigue {
+namespace fatigue {
     // Proxy to KittyMemoryEx namespace
     using namespace KittyMemoryEx;
 
@@ -25,4 +26,27 @@ namespace Fatigue {
     pid_t getProcessIDByStatusName(const std::string &processName);
     pid_t getProcessIDByCmdlineEndsWith(const std::string &processName);
     pid_t getProcessIDByCmdlineContains(const std::string &processName);
+
+
+    /**
+     * Memory manager for Fatigue
+     * Extends KittyMemoryMgr, adding PE (Portable Executable) format for Windows features
+     */
+    class Fatigue : public KittyMemoryMgr {
+    public:
+        Fatigue() : KittyMemoryMgr() {}
+
+        /**
+         * Initialize memory manager
+         * @param pid remote process ID
+         * @param eMemOp: Memory read & write operation type [ EK_MEM_OP_SYSCALL / EK_MEM_OP_IO ]
+         * @param initMemPatch: initialize MmeoryPatch & MemoryBackup instances, pass true if you want to use memPatch & memBackup
+         */
+        bool initialize(pid_t pid, EKittyMemOP eMemOp, bool initMemPatch);
+
+        inline std::string processCmdline() const { return processName(); }
+        inline std::string processStatusName() const { return m_processStatusName; }
+    private:
+        std::string m_processStatusName;
+    };
 }

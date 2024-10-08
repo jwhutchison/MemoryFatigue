@@ -1,8 +1,8 @@
 #include "KittyUtils.hpp"
 #include "Fatigue.hpp"
-#include "Utils.hpp"
+#include "utils.hpp"
 
-namespace Fatigue {
+namespace fatigue {
 
     std::string getProcessStatusName(pid_t pid)
     {
@@ -23,9 +23,9 @@ namespace Fatigue {
 
         char line[128] = {0};
         while (fgets(line, sizeof(line), fp)) {
-            if (KittyUtils::String::StartsWith(line, "Name:")) {
+            if (string::startsWith(line, "Name:")) {
                 name = line + 5;    // skip "Name:"
-                String::trim(name); // remove leading/trailing spaces
+                string::trim(name); // remove leading/trailing spaces
                 break;
             }
         }
@@ -68,22 +68,22 @@ namespace Fatigue {
 
     pid_t getProcessIDByStatusName(const std::string &processName)
     {
-        return getProcessIDByComparator(processName, [](const std::string &processName, const int entryPid) {
-            return processName == getProcessStatusName(entryPid);
+        return getProcessIDByComparator(processName, [](const std::string &processName, const int checkPid) {
+            return processName == getProcessStatusName(checkPid);
         });
     }
 
     pid_t getProcessIDByCmdlineEndsWith(const std::string &processName)
     {
-        return getProcessIDByComparator(processName, [](const std::string &processName, const int entryPid) {
-            return KittyUtils::String::EndsWith(getProcessName(entryPid), processName);
+        return getProcessIDByComparator(processName, [](const std::string &processName, const int checkPid) {
+            return string::endsWith(getProcessName(checkPid), processName);
         });
     }
 
     pid_t getProcessIDByCmdlineContains(const std::string &processName)
     {
-        return getProcessIDByComparator(processName, [](const std::string &processName, const int entryPid) {
-            return KittyUtils::String::Contains(getProcessName(entryPid), processName);
+        return getProcessIDByComparator(processName, [](const std::string &processName, const int checkPid) {
+            return string::contains(getProcessName(checkPid), processName);
         });
     }
 }

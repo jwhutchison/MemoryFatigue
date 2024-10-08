@@ -1,20 +1,18 @@
 #include "KittyMemoryMgr.hpp"
 #include "Fatigue.hpp"
-#include "Utils.hpp"
-#include "Win32.hpp"
+#include "utils.hpp"
+#include "PE.hpp"
 
-namespace Fatigue::Win32 {
+namespace fatigue::pe {
 
-    ProcSection* ProcMap::getSection(const std::string &name)
+    Section* ProcMap::getSection(const std::string &name)
     {
-        ProcSection *section = nullptr;
+        Section *section = nullptr;
 
         for (auto &it : section_headers) {
             // if secion name starts with a ., match with or without the dot
             if (name == it.name || (name[0] == '.' && name.substr(1) == it.name)) {
-                section = new ProcSection();
-                section->proc_map = this;
-                section->header = it;
+                section = new Section(this, it);
                 break;
             }
         }
@@ -25,21 +23,19 @@ namespace Fatigue::Win32 {
     ProcMap* getBaseProcessMap(KittyMemoryMgr &manager)
     {
         const pid_t pid = manager.processID();
-        const std::string processName = Fatigue::getProcessStatusName(pid);
+        const std::string processName = fatigue::getProcessStatusName(pid);
 
         ProcMap *processMap = nullptr;
 
         // KITTY_LOGI("Looking for process map of %s with pid %d", processName.c_str(), pid);
 
-        // Find the correct map. We are looking for a valid map that belongs to the actual executable
-        std::vector<Fatigue::ProcMap> maps = Fatigue::getAllMaps(pid);
+        // Find the correct map on this process that belongs to the actual executable.
+        // eg. a wine/proton process named "process.exe" should have a cmdline like "Z:\path\to\process.exe"
+        // Other maps will have win/steam/proton etc paths, but only one should have the executable name
+        std::vector<fatigue::ProcMap> maps = fatigue::getMapsEndWith(pid, processName);
         for (auto &it : maps) {
-            // Limit checking to maps that end with the process name
-            // eg. Z:\path\to\process.exe passes if the process status name is process.exe
-            // Other maps on the same process will have steam / proton / nvidia paths, but
-            // ideally only one will have the actual executable name
-            if (it.isValid() && !it.isUnknown() && KittyUtils::String::EndsWith(it.pathname, processName)) {
-                // Path and name match, now check if it's a valid Win32 PE executable
+            if (it.isValid() && !it.isUnknown()) {
+                // Check if it's a valid Win32 PE executable
                 // Read more than you want to at https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
                 std::size_t bytesRead = 0;
                 std::size_t currentOffset = 0;
@@ -114,10 +110,10 @@ namespace Fatigue::Win32 {
 
     void ProcMap::dump()
     {
-        printf("Win32::ProcMap: %s", toString().c_str());
-        printf("  DOS Header magic:      %s\n", Fatigue::data2PrettyHex(dos_header.magic).c_str());
-        printf("  COFF Header signature: %s\n", Fatigue::data2PrettyHex(coff_header.signature).c_str());
-        printf("  COFF Optional magic:   %s\n", Fatigue::data2PrettyHex(coff_optional_header.magic).c_str());
+        printf("pe::ProcMap: %s", toString().c_str());
+        printf("  DOS Header magic:      %s\n", fatigue::data2PrettyHex(dos_header.magic).c_str());
+        printf("  COFF Header signature: %s\n", fatigue::data2PrettyHex(coff_header.signature).c_str());
+        printf("  COFF Optional magic:   %s\n", fatigue::data2PrettyHex(coff_optional_header.magic).c_str());
         printf("  # of sections:         %d\n\n", coff_header.number_of_sections);
 
         for (auto &section : section_headers) {

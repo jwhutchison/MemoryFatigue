@@ -1,7 +1,7 @@
 #include "Fatigue.hpp"
 
-namespace Fatigue::Win32 {
-    // PE file structures
+namespace fatigue::pe {
+    // PE (Portable Executable) format for Windows executables, DLLs, etc
     // See https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
 
     struct DosHeader {
@@ -34,41 +34,48 @@ namespace Fatigue::Win32 {
         uint8_t ignored[24];
     };
 
-    class ProcSection {
+    class Section {
     public:
-        ProcMap* proc_map{};
-        SectionHeader header{0};
+        Section(): m_procMap(nullptr), m_header{0} {}
+        Section(ProcMap* procMap, SectionHeader header): m_procMap(procMap), m_header(header) {}
+
+        inline ProcMap* getProcMap() { return m_procMap; }
+        inline SectionHeader getHeader() { return m_header; }
 
         std::string getName()
         {
-            return std::string(header.name);
+            return std::string(m_header.name);
         }
 
         bool isValid()
         {
-            return header.virtual_size > 0;
+            return m_procMap->isValid() && m_header.virtual_size > 0;
         }
 
         uintptr_t getStartAddress()
         {
-            return proc_map->startAddress + header.virtual_address;
+            return m_procMap->startAddress + m_header.virtual_address;
         }
 
         uintptr_t getEndAddress()
         {
-            return getStartAddress() + header.virtual_size;
+            return getStartAddress() + m_header.virtual_size;
         }
+    protected:
+        ProcMap* m_procMap;
+        SectionHeader m_header;
     };
 
-    class ProcMap : public Fatigue::ProcMap {
+    class ProcMap : public fatigue::ProcMap {
     public:
         DosHeader dos_header{0};
         CoffHeader coff_header{0};
         CoffOptionalHeader coff_optional_header{0};
         std::vector<SectionHeader> section_headers{};
 
-        ProcMap() : Fatigue::ProcMap() {}
-        ProcMap(Fatigue::ProcMap &map) : Fatigue::ProcMap(map) {
+        ProcMap(): fatigue::ProcMap() {}
+        ProcMap(fatigue::ProcMap& map): fatigue::ProcMap(map)
+        {
             pid = map.pid;
             startAddress = map.startAddress;
             endAddress = map.endAddress;
@@ -88,9 +95,9 @@ namespace Fatigue::Win32 {
             pathname = std::string(map.pathname);
         }
 
-        ProcSection* getSection(const std::string &name = ".text");
+        Section* getSection(const std::string& name = ".text");
         void dump();
     };
 
-    ProcMap* getBaseProcessMap(KittyMemoryMgr &manager);
-}
+    ProcMap* getBaseProcessMap(KittyMemoryMgr& manager);
+} // namespace fatigue::pe

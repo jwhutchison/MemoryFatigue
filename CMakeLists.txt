@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(MemoryFatigue)
+project(
+    MemoryFatigue
+    VERSION 1.0
+    LANGUAGES CXX)
 
 set(KITTYMEMORY_PATH KittyMemoryEx)
 FILE(GLOB KITTYMEMORY_SRC ${KITTYMEMORY_PATH}/*.cpp)
@@ -18,8 +21,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -std=c++20 -DkNO_KEYSTONE")
 
 include_directories(
     ${FATIGUE_PATH}
-    ${KITTYMEMORY_PATH}
-)
+    ${KITTYMEMORY_PATH})
 
 add_executable(
     fatigue
