@@ -19,19 +19,16 @@ namespace fatigue {
             return "";
         }
 
-        std::string name = "";
-
         char line[128] = {0};
         while (fgets(line, sizeof(line), fp)) {
             if (string::startsWith(line, "Name:")) {
-                name = line + 5;    // skip "Name:"
-                string::trim(name); // remove leading/trailing spaces
-                break;
+                std::string name = line + 5;    // skip "Name:"
+                return string::trim(name); // remove leading/trailing spaces
             }
         }
 
         fclose(fp);
-        return name;
+        return "";
     }
 
     pid_t getProcessIDByComparator(const std::string &processName, bool (*comparator)(const std::string &, const int))
