@@ -25,7 +25,8 @@ struct local_symbol_t
 
 class KittyMemoryMgr
 {
-private:
+// private:
+protected:
     bool _init;
     pid_t _pid;
     std::string _process_name;

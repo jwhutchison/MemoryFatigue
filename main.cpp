@@ -9,44 +9,28 @@
 
 using namespace fatigue;
 
-KittyMemoryMgr manager;
-
 int main(int argc, char* args[])
 {
     KITTY_LOGI("================ FIND PROCESS BY SHORT NAME ===============");
 
     std::string processName = "sekiro.exe";
 
-    // get process ID
-    pid_t processID = getProcessIDByStatusName(processName);
-    if(!processID) {
-        KITTY_LOGI("Couldn't find process id for %s.", processName.c_str());
-        return 1;
-    }
-
-    std::string processCmd = getProcessName(processID);
+    // Attach to process
+    Fatigue *process = Fatigue::attach(processName, &getProcessIDByStatusName);
 
     KITTY_LOGI("Process Name: %s", processName.c_str());
-    KITTY_LOGI("Process ID:   %d", processID);
-    KITTY_LOGI("Process Cmd:  %s", processCmd.c_str());
+    KITTY_LOGI("Process ID:   %d", process->processID());
+    KITTY_LOGI("Process Cmd:  %s", process->processName().c_str());
+    KITTY_LOGI("Located PE:   %s", process->peScanner.isValid() ? "Yes" : "No");
 
-    // initialize KittyMemoryMgr instance with process ID
-    if(!manager.initialize(processID, EK_MEM_OP_SYSCALL, true)) {
-        KITTY_LOGI("Error occurred )':");
+    if (!process->peScanner.isValid()) {
+        KITTY_LOGE("Failed to locate PE headers");
         return 1;
     }
 
-    KITTY_LOGI("================ GET MAP ===============");
+    KITTY_LOGI("Found map: %s", process->peScanner.getProcMap()->toString().c_str());
 
-    pe::ProcMap* processMap = pe::getBaseProcessMap(manager);
-    pe::Section* textSection = nullptr;
-
-    if(processMap) {
-        KITTY_LOGI("Found map: %s", processMap->toString().c_str());
-        textSection = processMap->getSection(".text");
-    }
-
-    KITTY_LOGI("================ FIND TEXT SECTION ===============");
+    pe::SectionScanner *textSection = process->getPeSection(".text");
 
     if(textSection && textSection->isValid()) {
         KITTY_LOGI("Found text section: \"%s\"",
@@ -61,7 +45,7 @@ int main(int argc, char* args[])
         // scan with ida pattern & get one result
         uintptr_t found_at = 0;
 
-        found_at = manager.memScanner.findIdaPatternFirst(
+        found_at = process->memScanner.findIdaPatternFirst(
             search_start, search_end, "C7 43 ? ? ? ? ? 4C 89 AB");
         if(found_at) {
             KITTY_LOGI("found ida pattern at %p in %s", (void*)found_at,
@@ -70,14 +54,13 @@ int main(int argc, char* args[])
             char buffer[10] = {0};
             int offset = 0x0;
             std::size_t bytesRead
-                = manager.readMem(found_at + offset, buffer, sizeof(buffer));
+                = process->readMem(found_at + offset, buffer, sizeof(buffer));
             printf("  %s\n", fatigue::data2PrettyHex(buffer).c_str());
             KITTY_LOGI("\n%s",
                        KittyUtils::HexDump(buffer, sizeof(buffer)).c_str());
         }
     }
 
-    delete processMap;
     delete textSection;
 
     return 0;
