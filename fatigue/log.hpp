@@ -35,7 +35,7 @@ namespace fatigue::log {
         Debug,
     };
 
-    std::map<LogLevel, std::string> logLevelNames = {
+    const std::map<LogLevel, const std::string> logLevelNames = {
         {LogLevel::Error, "💥 ERROR"},
         {LogLevel::Warning, "🚩 WARNING"},
         {LogLevel::Fail, "➖ FAIL"},
@@ -44,7 +44,7 @@ namespace fatigue::log {
         {LogLevel::Debug, "🔨 DEBUG"},
     };
 
-    std::map<LogLevel, Color> logLevelColors = {
+    const std::map<LogLevel, Color> logLevelColors = {
         {LogLevel::Error, Color::BrightRed},
         {LogLevel::Warning, Color::BrightYellow},
         {LogLevel::Fail, Color::Red},
@@ -53,32 +53,32 @@ namespace fatigue::log {
         {LogLevel::Debug, Color::Magenta},
     };
 
-    std::string logColorize(LogLevel const lvl, std::string const &str)
+    inline std::string logColorize(LogLevel const lvl, std::string const &str)
     {
-        return colorize(logLevelColors.contains(lvl) ? logLevelColors[lvl] : Color::Reset, str);
+        return colorize(logLevelColors.contains(lvl) ? logLevelColors.at(lvl) : Color::Reset, str);
     }
 
-    std::string to_string(LogLevel const lvl)
+    inline std::string to_string(LogLevel const lvl)
     {
-        return logLevelNames.contains(lvl) ? logLevelNames[lvl] : "?";
+        return logLevelNames.contains(lvl) ? logLevelNames.at(lvl) : "?";
     }
 
-    std::string to_tag(LogLevel const lvl)
+    inline std::string to_tag(LogLevel const lvl)
     {
         return logColorize(lvl, std::format("[ {:<10} ]", to_string(lvl)));
     }
 
-    auto as_local(std::chrono::system_clock::time_point const tp)
+    inline auto as_local(std::chrono::system_clock::time_point const tp)
     {
         return std::chrono::zoned_time{std::chrono::current_zone(), tp};
     }
 
-    std::string to_string(std::chrono::system_clock::time_point const tp)
+    inline std::string to_string(std::chrono::system_clock::time_point const tp)
     {
         return std::format("{:%F %T %Z}", tp);
     }
 
-    std::string to_string(std::source_location const source)
+    inline std::string to_string(std::source_location const source)
     {
         return std::format(
             "{} in {}:{}",
@@ -88,8 +88,8 @@ namespace fatigue::log {
         );
     }
 
-    void log(LogLevel const lvl, std::string_view const message,
-            std::source_location const source = std::source_location::current())
+    inline void log(LogLevel const lvl, std::string_view const message,
+                    std::source_location const source = std::source_location::current())
     {
         // Only log messages at or above the specified level
         if (lvl < LogLevel::Error || lvl > FATIGUE_LOG_LEVEL) return;
@@ -100,20 +100,20 @@ namespace fatigue::log {
         // Compact mode: no timestamp, single line
         if (!FATIGUE_LOG_COMPACT) {
             std::cout << Color::BrightBlack << to_string(as_local(std::chrono::system_clock::now())) << Color::Reset;
-            std::cout << '\n';
+            std::cout << std::endl;
         }
         // End header
 
         // All levels: message
-        std::cout << message << '\n';
+        std::cout << message << std::endl;
 
         // Debug: source location for debug level (all levels if FATIGUE_LOG_LEVEL == Debug)
         if (FATIGUE_LOG_LEVEL >= LogLevel::Debug) {
-            std::cout << Color::BrightBlack << "🔍️ At " << to_string(source) << Color::Reset << '\n';
+            std::cout << Color::BrightBlack << "🔍️ At " << to_string(source) << Color::Reset << std::endl;
         }
 
         if (!FATIGUE_LOG_COMPACT) {
-            std::cout << '\n';
+            std::cout << std::endl;
         }
     }
 }

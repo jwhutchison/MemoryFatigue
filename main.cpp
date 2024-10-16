@@ -2,32 +2,28 @@
 #define FATIGUE_LOG_COMPACT false
 #define FATIGUE_COLOR true
 
-#include "log.hpp"
-#include "memory.hpp"
-#include <cstdint>
 #include <format>
 #include <string>
-#include <thread>
-#include <vector>
+#include "fatigue.hpp"
+#include "log.hpp"
 
 using namespace fatigue;
 
 int main(int argc, char* args[])
 {
-    logInfo("==>> Starting Fatigue");
+    std::cout << "Hello World" << std::endl;
+
+    logInfo("Step 1: Find Sekiro.exe");
 
     std::string processName = "sekiro.exe";
 
     // Attach to process
     // Fatigue *process = Fatigue::attach(processName, &getProcessIDByStatusName);
 
-    logDebug(std::format("Process Name: {}", processName.c_str()));
+    logInfo(std::format("Process Name: {}", processName.c_str()));
 
-    logFail("This is a fail message");
-    logSuccess("This is a success message");
 
-    logWarning("This isn't implemented yet");
-    logError("No really, it's not implemented");
+    logDebug(std::format("lol {}", getCmdline(392440)));
 
     // KITTY_LOGI("Process ID:   %d", process->processID());
     // KITTY_LOGI("Process Cmd:  %s", process->processName().c_str());
