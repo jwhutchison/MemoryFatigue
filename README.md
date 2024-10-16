@@ -4,10 +4,7 @@
 
 General purpose memory pattern and patch utility for Steam games on linux.
 
-Requires C++11 or above. Build with cmake.
-
-Uses [KittyMemoryEx](https://github.com/MJx0/KittyMemoryEx)
-
-Based on the amazing work of others:
-- [SekiroFpsUnlockAndMore](https://github.com/uberhalit/SekiroFpsUnlockAndMore)
+Heavily based on the amazing work of others:
+- [KittyMemoryEx](https://github.com/MJx0/KittyMemoryEx)
 - [sekirofpsunlock](https://github.com/Lahvuun/sekirofpsunlock)
+- [SekiroFpsUnlockAndMore](https://github.com/uberhalit/SekiroFpsUnlockAndMore)

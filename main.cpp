@@ -1,8 +1,11 @@
-#include "Fatigue.hpp"
-#include "KittyMemoryMgr.hpp"
-#include "utils.hpp"
-#include "PE.hpp"
+#define FATIGUE_LOG_LEVEL fatigue::log::LogLevel::Debug
+#define FATIGUE_LOG_COMPACT false
+#define FATIGUE_COLOR true
+
+#include "log.hpp"
+#include "memory.hpp"
 #include <cstdint>
+#include <format>
 #include <string>
 #include <thread>
 #include <vector>
@@ -11,57 +14,62 @@ using namespace fatigue;
 
 int main(int argc, char* args[])
 {
-    KITTY_LOGI("================ FIND PROCESS BY SHORT NAME ===============");
+    logInfo("==>> Starting Fatigue");
 
     std::string processName = "sekiro.exe";
 
     // Attach to process
-    Fatigue *process = Fatigue::attach(processName, &getProcessIDByStatusName);
+    // Fatigue *process = Fatigue::attach(processName, &getProcessIDByStatusName);
 
-    KITTY_LOGI("Process Name: %s", processName.c_str());
-    KITTY_LOGI("Process ID:   %d", process->processID());
-    KITTY_LOGI("Process Cmd:  %s", process->processName().c_str());
-    KITTY_LOGI("Located PE:   %s", process->peScanner.isValid() ? "Yes" : "No");
+    logDebug(std::format("Process Name: {}", processName.c_str()));
 
-    if (!process->peScanner.isValid()) {
-        KITTY_LOGE("Failed to locate PE headers");
-        return 1;
-    }
+    logFail("This is a fail message");
+    logSuccess("This is a success message");
 
-    KITTY_LOGI("Found map: %s", process->peScanner.getProcMap()->toString().c_str());
+    logWarning("This isn't implemented yet");
+    logError("No really, it's not implemented");
 
-    pe::SectionScanner *textSection = process->getPeSection(".text");
+    // KITTY_LOGI("Process ID:   %d", process->processID());
+    // KITTY_LOGI("Process Cmd:  %s", process->processName().c_str());
+    // KITTY_LOGI("Located PE:   %s", process->peScanner.isValid() ? "Yes" : "No");
 
-    if(textSection && textSection->isValid()) {
-        KITTY_LOGI("Found text section: \"%s\"",
-                   textSection->getName().c_str());
+    // if (!process->peScanner.isValid()) {
+    //     KITTY_LOGE("Failed to locate PE headers");
+    //     return 1;
+    // }
 
-        uintptr_t search_start = textSection->getStartAddress();
-        uintptr_t search_end = textSection->getEndAddress();
+    // KITTY_LOGI("Found map: %s", process->peScanner.getProcMap()->toString().c_str());
 
-        KITTY_LOGI("search start %p", (void*)search_start);
-        KITTY_LOGI("search end %p", (void*)search_end);
+    // pe::SectionScanner *textSection = process->getPeSection(".text");
 
-        // scan with ida pattern & get one result
-        uintptr_t found_at = 0;
+    // if(textSection && textSection->isValid()) {
+    //     KITTY_LOGI("Found text section: \"%s\"",
+    //                textSection->getName().c_str());
 
-        found_at = process->memScanner.findIdaPatternFirst(
-            search_start, search_end, "C7 43 ? ? ? ? ? 4C 89 AB");
-        if(found_at) {
-            KITTY_LOGI("found ida pattern at %p in %s", (void*)found_at,
-                       textSection->getName().c_str());
+    //     uintptr_t search_start = textSection->getStartAddress();
+    //     uintptr_t search_end = textSection->getEndAddress();
 
-            char buffer[10] = {0};
-            int offset = 0x0;
-            std::size_t bytesRead
-                = process->readMem(found_at + offset, buffer, sizeof(buffer));
-            printf("  %s\n", fatigue::data2PrettyHex(buffer).c_str());
-            KITTY_LOGI("\n%s",
-                       KittyUtils::HexDump(buffer, sizeof(buffer)).c_str());
-        }
-    }
+    //     KITTY_LOGI("search start %p", (void*)search_start);
+    //     KITTY_LOGI("search end %p", (void*)search_end);
 
-    delete textSection;
+    //     // scan with ida pattern & get one result
+    //     uintptr_t found_at = 0;
+
+    //     found_at = process->memScanner.findIdaPatternFirst(
+    //         search_start, search_end, "C7 43 ? ? ? ? ? 4C 89 AB");
+    //     if(found_at) {
+    //         KITTY_LOGI("found ida pattern at %p in %s", (void*)found_at,
+    //                    textSection->getName().c_str());
+
+    //         char buffer[10] = {0};
+    //         int offset = 0x0;
+    //         std::size_t bytesRead
+    //             = process->readMem(found_at + offset, buffer, sizeof(buffer));
+    //         printf("  %s\n", fatigue::data2PrettyHex(buffer).c_str());
+    //         KITTY_LOGI("\n%s",
+    //                    KittyUtils::HexDump(buffer, sizeof(buffer)).c_str());
+    //     }
+    // }
 
     return 0;
 }
