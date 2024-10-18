@@ -1,8 +1,15 @@
 #pragma once
 
+#include <map>
 #include <string>
 
 namespace fatigue {
+    /**
+     * Get all status information from /proc/[pid]/status
+     * Returns a map of key-value pairs as strings
+     */
+    std::map<std::string, std::string> getStatus(pid_t pid);
+
     /**
      * Get process name by PID from /proc/[pid]/status
      * Typically, this is just the executable name without the path.
@@ -28,7 +35,7 @@ namespace fatigue {
      * to check against
      */
     pid_t getProcessId(const std::string& processName,
-                       bool (*comparator)(const std::string&, const int));
+                       bool (*comparator)(const std::string&, const pid_t));
 
     /**
      * Get a process ID by strict matching to /proc/[pid]/cmdline

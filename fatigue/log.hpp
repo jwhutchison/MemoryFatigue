@@ -1,13 +1,5 @@
 #pragma once
 
-#ifndef FATIGUE_LOG_LEVEL
-#define FATIGUE_LOG_LEVEL fatigue::log::LogLevel::Warning
-#endif
-
-#ifndef FATIGUE_LOG_COMPACT
-#define FATIGUE_LOG_COMPACT false
-#endif
-
 #include <chrono>
 #include <filesystem>
 #include <iostream>
@@ -21,9 +13,6 @@ using namespace fatigue::color;
 namespace fatigue::log {
     /**
      * Log levels for messages
-     * Set FATIGUE_LOG_LEVEL to the desired level before including this file
-     *     If set to Debug, messages will include source location
-     * Set FATIGUE_LOG_COMPACT to true to disable timestamps and newlines
      */
     enum class LogLevel: int {
         Quiet = -1,
@@ -34,6 +23,22 @@ namespace fatigue::log {
         Info,
         Debug,
     };
+
+    void setLogLevel(LogLevel lvl);
+    LogLevel getLogLevel();
+
+    /**
+     * Log format options
+     */
+    enum class LogFormat: int {
+        Verbose, // currently unused
+        Default,
+        Compact,
+        Tiny,
+    };
+
+    void setLogFormat(LogFormat fmt);
+    LogFormat getLogFormat();
 
     const std::map<LogLevel, const std::string> logLevelNames = {
         {LogLevel::Error, "💥 ERROR"},
@@ -53,74 +58,40 @@ namespace fatigue::log {
         {LogLevel::Debug, Color::Magenta},
     };
 
-    inline std::string logColorize(LogLevel const lvl, std::string const &str)
-    {
-        return colorize(logLevelColors.contains(lvl) ? logLevelColors.at(lvl) : Color::Reset, str);
-    }
+    std::string logColorize(LogLevel const lvl, std::string const &str);
 
-    inline std::string to_string(LogLevel const lvl)
-    {
-        return logLevelNames.contains(lvl) ? logLevelNames.at(lvl) : "?";
-    }
+    // Type to string formatters
 
-    inline std::string to_tag(LogLevel const lvl)
-    {
-        return logColorize(lvl, std::format("[ {:<10} ]", to_string(lvl)));
-    }
+    std::string to_string(LogLevel const lvl);
+    std::string to_tag(LogLevel const lvl);
 
-    inline auto as_local(std::chrono::system_clock::time_point const tp)
-    {
-        return std::chrono::zoned_time{std::chrono::current_zone(), tp};
-    }
+    auto as_local(std::chrono::system_clock::time_point const tp);
+    std::string to_string(std::chrono::system_clock::time_point const tp);
 
-    inline std::string to_string(std::chrono::system_clock::time_point const tp)
-    {
-        return std::format("{:%F %T %Z}", tp);
-    }
+    std::string to_string(std::source_location const source);
 
-    inline std::string to_string(std::source_location const source)
-    {
-        return std::format(
-            "{} in {}:{}",
-            source.function_name(),
-            std::filesystem::path(source.file_name()).filename().string(),
-            source.line()
-        );
-    }
+    // Logging functions
 
-    inline void log(LogLevel const lvl, std::string_view const message,
-                    std::source_location const source = std::source_location::current())
-    {
-        // Only log messages at or above the specified level
-        if (lvl < LogLevel::Error || lvl > FATIGUE_LOG_LEVEL) return;
-
-        // Start header
-        std::cout << to_tag(lvl) << ' ';
-
-        // Compact mode: no timestamp, single line
-        if (!FATIGUE_LOG_COMPACT) {
-            std::cout << Color::BrightBlack << to_string(as_local(std::chrono::system_clock::now())) << Color::Reset;
-            std::cout << std::endl;
-        }
-        // End header
-
-        // All levels: message
-        std::cout << message << std::endl;
-
-        // Debug: source location for debug level (all levels if FATIGUE_LOG_LEVEL == Debug)
-        if (FATIGUE_LOG_LEVEL >= LogLevel::Debug) {
-            std::cout << Color::BrightBlack << "🔍️ At " << to_string(source) << Color::Reset << std::endl;
-        }
-
-        if (!FATIGUE_LOG_COMPACT) {
-            std::cout << std::endl;
-        }
-    }
+    void log(LogLevel const lvl, std::string_view const message,
+                    std::source_location const source = std::source_location::current());
 }
 
+// Convenience macros for logging
+#ifndef logError
 #define logError(msg) fatigue::log::log(fatigue::log::LogLevel::Error, msg);
+#endif
+#ifndef logWarning
 #define logWarning(msg) fatigue::log::log(fatigue::log::LogLevel::Warning, msg);
+#endif
+#ifndef logSuccess
 #define logSuccess(msg) fatigue::log::log(fatigue::log::LogLevel::Success, msg);
+#endif
+#ifndef logFail
 #define logFail(msg) fatigue::log::log(fatigue::log::LogLevel::Fail, msg);
+#endif
+#ifndef logInfo
 #define logInfo(msg) fatigue::log::log(fatigue::log::LogLevel::Info, msg);
+#endif
+#ifndef logDebug
 #define logDebug(msg) fatigue::log::log(fatigue::log::LogLevel::Debug, msg);
+#endif

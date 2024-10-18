@@ -1,7 +1,3 @@
-#define FATIGUE_LOG_LEVEL fatigue::log::LogLevel::Debug
-#define FATIGUE_LOG_COMPACT false
-#define FATIGUE_COLOR true
-
 #include <format>
 #include <string>
 #include "fatigue.hpp"
@@ -9,9 +5,22 @@
 
 using namespace fatigue;
 
+void testLog() {
+    logDebug("Debug message");
+    logInfo("Info message");
+    logSuccess("Success message");
+    logFail("Fail message");
+    logWarning("Warning message");
+    logError("Error message");
+}
+
 int main(int argc, char* args[])
 {
-    std::cout << "Hello World" << std::endl;
+    // log::setLogFormat(log::LogFormat::Default);
+    log::setLogFormat(log::LogFormat::Tiny);
+    log::setLogLevel(log::LogLevel::Debug);
+
+    // testLog();
 
     logInfo("Step 1: Find Sekiro.exe");
 
@@ -22,8 +31,12 @@ int main(int argc, char* args[])
 
     logInfo(std::format("Process Name: {}", processName.c_str()));
 
+    pid_t pid = getProcessIdByCmdlineEndsWith("zen-bin");
+    logInfo(std::format("Process ID: {}", pid));
 
-    logDebug(std::format("lol {}", getCmdline(392440)));
+    std::string statusName = getStatusName(pid);
+
+    logInfo(std::format("Status Name: {}", statusName.c_str()));
 
     // KITTY_LOGI("Process ID:   %d", process->processID());
     // KITTY_LOGI("Process Cmd:  %s", process->processName().c_str());

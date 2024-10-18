@@ -1,15 +1,55 @@
+#include <algorithm>
 #include "utils.hpp"
 
-namespace fatigue::color {
-    std::ostream &operator<<(std::ostream &os, Color code)
-    {
-        if (!FATIGUE_COLOR) return os;
-        return os << "\033[" << static_cast<int>(code) << "m";
-    }
+namespace fatigue {
 
-    std::string colorize(Color code, std::string const &str)
-    {
-        if (!FATIGUE_COLOR) return str;
-        return "\033[" + std::to_string(static_cast<int>(code)) + "m" + str + "\033[0m";
-    }
-} // namespace fatigue::color
+    namespace string {
+        std::string toUpper(const std::string &str)
+        {
+            std::string out = std::string(str);
+            std::transform(out.cbegin(), out.cend(), out.begin(), ::toupper);
+            return out;
+        }
+
+        std::string toLower(const std::string &str)
+        {
+            std::string out = std::string(str);
+            std::transform(out.cbegin(), out.cend(), out.begin(), ::tolower);
+            return out;
+        }
+
+        std::string trim(std::string &str)
+        {
+            std::string out = std::string(str);
+
+            out.erase(out.begin(), std::find_if(out.begin(), out.end(), [](unsigned char ch) {
+                return std::isprint(ch) && !std::isspace(ch);
+            }));
+            out.erase(std::find_if(out.rbegin(), out.rend(), [](unsigned char ch) {
+                return std::isprint(ch) && !std::isspace(ch);
+            }).base(), out.end());
+
+            return out;
+        }
+    } // namespace string
+
+    // std::string data2Hex(const void* data, const std::size_t length)
+    // {
+    //     return KittyUtils::data2Hex(data, length);
+    // }
+
+    // std::string data2PrettyHex(const void* data, const std::size_t length)
+    // {
+    //     std::string original = data2Hex(data, length);
+
+    //     // Make an uppercase copy of the original string
+    //     std::string result = string::toUpper(original);
+
+    //     // Add spaces between each byte
+    //     for (int i = 0; i < original.size(); i += 2) {
+    //         result += original.substr(i, 2) + " ";
+    //     }
+
+    //     return result;
+    // }
+}

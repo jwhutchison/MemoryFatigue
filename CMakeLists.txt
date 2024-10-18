@@ -13,11 +13,12 @@ FILE(GLOB FATIGUE_SRC ${FATIGUE_PATH}/*.cpp)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 # https://github.com/keystone-engine/keystone
 # get keystone binaries and remove DkNO_KEYSTONE to use MemoryPatch::craeteWithAsm
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -std=c++20 -DkNO_KEYSTONE")
+# Use -DNO_COLOR to remove colors from output
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -std=c++23 -DkNO_KEYSTONE")
 
 #link_libraries("-lm -ldl -lpthread")
 

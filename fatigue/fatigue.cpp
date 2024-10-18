@@ -3,106 +3,136 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <map>
 #include <string>
 #include "fatigue.hpp"
 #include "log.hpp"
 
 namespace fatigue {
 
-    // std::string getStatusName(pid_t pid)
-    // {
-    //     if (pid <= 0) return "";
+    std::map<std::string, std::string> getStatus(pid_t pid)
+    {
+        std::map<std::string, std::string> status{};
+        if (pid <= 0) return status;
 
-    //     char status[256] = {0};
-    //     snprintf(status, sizeof(status), "/proc/%d/status", pid);
+        std::filesystem::path path = std::format("/proc/{}/status", pid);
+        std::ifstream file(path);
+        if (!file.is_open()) {
+            logError(std::format("Error opening {}", path.c_str()));
+            return status;
+        }
 
-    //     errno = 0;
-    //     FILE* fp = fopen(status, "r");
-    //     if (!fp) {
-    //         logError(std::format("Couldn't open status file %s, error=%s", status,
-    //                    strerror(errno)));
-    //         return "";
-    //     }
+        try {
+            std::string line;
+            while (std::getline(file, line)) {
+                std::istringstream iss{line};
 
-    //     char line[128] = {0};
-    //     while (fgets(line, sizeof(line), fp)) {
-    //         if (string::startsWith(line, "Name:")) {
-    //             std::string name = line + 5; // skip "Name:"
-    //             return string::trim(name); // remove leading/trailing spaces
-    //         }
-    //     }
+                // Get key, remove trailing : and whitespace
+                std::string key;
+                iss >> key;
 
-    //     fclose(fp);
-    //     return "";
-    // }
+                key = string::trim(key);
+                if (key.ends_with(':')) key = key.substr(0, key.size() - 1);
+
+                // Get value
+                std::string value{""};
+                std::string token;
+                while (iss >> token) {
+                    value += token + " ";
+                }
+
+                // Trim value
+                status[key] = string::trim(value);
+            }
+        } catch (const std::exception& e) {
+            logError(std::format("Error reading {}: {}", path.c_str(), e.what()));
+            return status;
+        }
+
+        return status;
+    }
+
+    std::string getStatusName(pid_t pid)
+    {
+        if (pid <= 0) return "";
+
+        std::map<std::string, std::string> status = getStatus(pid);
+        if (status.find("Name") != status.end()) {
+            return status["Name"];
+        }
+
+        return "";
+    }
 
     std::string getCmdline(pid_t pid)
     {
-        if (pid <= 0)
-            return "";
+        if (pid <= 0) return "";
 
         std::filesystem::path path = std::format("/proc/{}/cmdline", pid);
         std::ifstream file(path);
-
         if (!file.is_open()) {
-            // logError(std::format("Couldn't open cmdline file {}, error={}", path, file.rdstate()));
+            logError(std::format("Error opening {}", path.c_str()));
             return "";
         }
 
-        std::string cmdline;
-        std::getline(file, cmdline);
-        return cmdline;
+        try {
+            std::string buffer;
+            file >> buffer;
+            return string::trim(buffer);
+        } catch (const std::exception& e) {
+            logError(std::format("Error reading {}: {}", path.c_str(), e.what()));
+            return "";
+        }
     }
 
-    // pid_t getProcessID(const std::string& processName,
-    //                    bool (*comparator)(const std::string&, const int))
-    // {
-    //     if (processName.empty()) return 0;
+    pid_t getProcessID(const std::string& processName,
+                       bool (*comparator)(const std::string&, const pid_t))
+    {
+        if (processName.empty()) return 0;
 
-    //     pid_t pid = 0;
+        pid_t pid = 0;
 
-    //     errno = 0;
-    //     DIR* dir = opendir("/proc/");
-    //     if (!dir) {
-    //         logError(std::format("Couldn't open /proc/, error=%s", strerror(errno)));
-    //         return pid;
-    //     }
+        const std::filesystem::path proc{"/proc/"};
+        for (auto const& entry : std::filesystem::directory_iterator{proc}) {
+            if (entry.is_directory()) {
+                pid_t entryPid = atoi(entry.path().filename().c_str());
+                if (entryPid > 0) {
+                    if (comparator(processName, entryPid)) {
+                        pid = entryPid;
+                        break;
+                    }
+                }
+            }
 
-    //     dirent* entry = nullptr;
-    //     while ((entry = readdir(dir)) != nullptr) {
-    //         int entryPid = atoi(entry->d_name);
-    //         if (entryPid > 0) {
-    //             if (comparator(processName, entryPid)) {
-    //                 pid = entryPid;
-    //                 break;
-    //             }
-    //         }
+        }
 
-    //         delete entry;
-    //     }
+        return pid;
+    }
 
-    //     closedir(dir);
-    //     return pid;
-    // }
+    pid_t getProcessId(const std::string& cmdline) {
+        return getProcessID(cmdline, [](const std::string& processName, const int checkPid) {
+            return getCmdline(checkPid) == processName;
+        });
+    }
 
-    // pid_t getProcessIDByStatusName(const std::string& processName)
-    // {
-    //     return getProcessID(processName, [](const std::string& processName, const int checkPid) {
-    //         return processName == getStatusName(checkPid);
-    //     });
-    // }
+    pid_t getProcessIdByStatusName(const std::string& processName)
+    {
+        return getProcessID(processName, [](const std::string& processName, const int checkPid) {
+            return getStatusName(checkPid) == processName;
+        });
+    }
 
-    // pid_t getProcessIDByCmdlineEndsWith(const std::string& processName)
-    // {
-    //     return getProcessID(processName, [](const std::string& processName, const int checkPid) {
-    //         return string::endsWith(getProcessName(checkPid), processName);
-    //     });
-    // }
+    pid_t getProcessIdByCmdlineEndsWith(const std::string& processName)
+    {
+        return getProcessID(processName, [](const std::string& processName, const int checkPid) {
+            return getCmdline(checkPid).ends_with(processName);
+        });
+    }
 
-    // pid_t getProcessIDByCmdlineContains(const std::string& processName)
-    // {
-    //     return getProcessID(processName, [](const std::string& processName, const int checkPid) {
-    //         return string::contains(getProcessName(checkPid), processName);
-    //     });
-    // }
+    pid_t getProcessIdByCmdlineContains(const std::string& processName)
+    {
+        return getProcessID(processName, [](const std::string& processName, const int checkPid) {
+            return getCmdline(checkPid).contains(processName);
+        });
+    }
 } // namespace fatigue
