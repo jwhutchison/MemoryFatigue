@@ -17,7 +17,8 @@ void testLog() {
 int main(int argc, char* args[])
 {
     // log::setLogFormat(log::LogFormat::Default);
-    log::setLogFormat(log::LogFormat::Tiny);
+    log::setLogFormat(log::LogFormat::Compact);
+    // log::setLogFormat(log::LogFormat::Tiny);
     log::setLogLevel(log::LogLevel::Debug);
 
     // testLog();
@@ -25,27 +26,27 @@ int main(int argc, char* args[])
     logInfo("Step 1: Find Sekiro.exe");
 
     std::string processName = "sekiro.exe";
-
-    // Attach to process
-    // Fatigue *process = Fatigue::attach(processName, &getProcessIDByStatusName);
-
-    logInfo(std::format("Process Name: {}", processName.c_str()));
-
-    pid_t pid = getProcessIdByCmdlineEndsWith("zen-bin");
-    logInfo(std::format("Process ID: {}", pid));
-
+    pid_t pid = getProcessIdByStatusName(processName);
     std::string statusName = getStatusName(pid);
 
-    logInfo(std::format("Status Name: {}", statusName.c_str()));
+    logInfo(std::format("Process Name: {}", processName.c_str()));
+    logInfo(std::format("Process ID:   {}", pid));
+    logInfo(std::format("Status Name:  {}", statusName.c_str()));
 
-    // KITTY_LOGI("Process ID:   %d", process->processID());
-    // KITTY_LOGI("Process Cmd:  %s", process->processName().c_str());
     // KITTY_LOGI("Located PE:   %s", process->peScanner.isValid() ? "Yes" : "No");
 
     // if (!process->peScanner.isValid()) {
     //     KITTY_LOGE("Failed to locate PE headers");
     //     return 1;
     // }
+
+    logInfo("Step 2: Get process maps");
+
+    // std::vector<Map> maps = getValidMaps(pid);
+    // std::vector<Map> maps = getMaps(pid, processName);
+    Map map = findMap(pid, processName);
+
+    logInfo(map.toString());
 
     // KITTY_LOGI("Found map: %s", process->peScanner.getProcMap()->toString().c_str());
 
