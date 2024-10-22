@@ -5,6 +5,11 @@
 #include <iostream>
 #include "fatigue.hpp"
 #include "log.hpp"
+#include <sys/ptrace.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <sys/uio.h>
 
 namespace fatigue {
 
@@ -228,11 +233,38 @@ namespace fatigue {
             return {};
         }
 
-        logDebug(std::format("Read {} bytes from /proc/{}/mem at {:#x}", size, pid, address));
-
-        std::cout << ">> " << static_cast<char*>(buffer) << " <<" << std::endl;
-
         return buffer;
     }
 
+    ssize_t readMem2(pid_t pid, uintptr_t address, void* buffer, size_t size)
+    {
+        if (pid <= 0 || address <= 0 || size <= 0) return {};
+
+        std::filesystem::path path = std::format("/proc/{}/mem", pid);
+        auto fd = open(path.c_str(), O_RDWR);
+
+        ptrace(PTRACE_ATTACH, pid, 0, 0);
+        waitpid(pid, NULL, 0);
+
+        ssize_t bytesRead = pread(fd, &buffer, size, address);
+        // pwrite(fd, &value, sizeof(value), addr);
+
+        ptrace(PTRACE_DETACH, pid, 0, 0);
+
+        close(fd);
+
+        return bytesRead;
+    }
+
+    ssize_t readMem3(pid_t pid, uintptr_t address, void* buffer, size_t size)
+    {
+        if (pid <= 0 || address <= 0 || size <= 0) return {};
+
+        struct iovec local = { .iov_base = buffer, .iov_len = size };
+        struct iovec remote = { .iov_base = reinterpret_cast<void*>(address), .iov_len = size };
+
+        ssize_t bytesRead = process_vm_readv(pid, &local, 1, &remote, 1, 0);
+
+        return bytesRead;
+    }
 } // namespace fatigue

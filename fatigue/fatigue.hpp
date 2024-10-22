@@ -129,4 +129,7 @@ namespace fatigue {
 
     bool readMem(pid_t pid, uintptr_t address, void* buffer, size_t size);
 
+    ssize_t readMem2(pid_t pid, uintptr_t address, void* buffer, size_t size);
+    ssize_t readMem3(pid_t pid, uintptr_t address, void* buffer, size_t size);
+
 } // namespace fatigue

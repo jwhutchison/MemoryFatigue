@@ -37,27 +37,33 @@ namespace fatigue {
         std::string toLower(const std::string &str);
         /** Copy a string and trim leading and trailing spaces and unprintable characters */
         std::string trim(std::string &str);
+        /** Copy a string and remove all spaces */
+        std::string compact(std::string &str);
     }
 
     namespace hex {
-        // Alias some very useful functions from KittyUtils
-        // constexpr auto validateHex = KittyUtils::String::ValidateHex;
+        /** Check if a string is a valid hexadecimal string */
+        bool isValid(const std::string &hex);
+        /** Prettify a hexadecimal string with spaces between each byte pair */
+        std::string prettify(const std::string &hex);
+        /** Convert a hexadecimal string to its ASCII representation */
+        std::string asciify(std::string &hex);
 
         /** Convert a chunk of data to its hexadecimal representation */
         std::string toHex(const void* data, const std::size_t length);
         /** Convert a chunk of data to its hexadecimal representation, autosize */
         template <typename T>
         std::string toHex(const T &data) { return toHex(data, sizeof(T)); }
-        // /** Convert a hexadecimal string to a chunk of data */
-        // constexpr auto dataFromHex = KittyUtils::dataFromHex;
+        /** Convert a hexadecimal string to a chunk of data */
+        void parse(const std::string &hex, void* buffer);
 
-        // /** Print HEX string from data; formatted uppercase with spaces between each byte pair */
-        // std::string data2PrettyHex(const void* data, const std::size_t length);
-        // /** Print HEX string from data; formatted uppercase with spaces between each byte pair, autosize */
-        // template <typename T>
-        // std::string data2PrettyHex(const T &data) { return data2PrettyHex(&data, sizeof(T)); }
+        /** Print HEX string from data; formatted uppercase with spaces between each byte pair */
+        inline std::string toPrettyHex(const void* data, const std::size_t length) { return prettify(toHex(data, length)); }
+        /** Print HEX string from data; formatted uppercase with spaces between each byte pair, autosize */
+        template <typename T>
+        std::string toPrettyHex(const T &data) { return toPrettyHex(&data, sizeof(T)); }
 
-        // template <std::size_t rowSize = 8, bool showASCII = true>
-        // std::string dumpHex(const void* data, std::size_t len) { KittyUtils::HexDump<rowSize, showASCII>(data, len); }
+        /** Print HEX dump from data; formatted with ASCII representation */
+        std::string dump(const void* data, std::size_t length, std::size_t rowSize = 8, bool showASCII = true);
     } // namespace hex
 } // namespace fatigue
