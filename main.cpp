@@ -2,6 +2,9 @@
 #include <string>
 #include "fatigue.hpp"
 #include "log.hpp"
+#include "pe.hpp"
+
+#include "KittyMemoryEx/KittyMemOp.hpp"
 
 using namespace fatigue;
 
@@ -27,11 +30,14 @@ int main(int argc, char* args[])
 
     std::string processName = "sekiro.exe";
     pid_t pid = getProcessIdByStatusName(processName);
+    // pid_t pid = getProcessIdByCmdlineEndsWith(processName);
+    // pid_t pid = getProcessIdByCmdlineContains(processName);
+
     std::string statusName = getStatusName(pid);
 
-    logInfo(std::format("Process Name: {}", processName.c_str()));
+    logInfo(std::format("Process Name: {}", processName));
     logInfo(std::format("Process ID:   {}", pid));
-    logInfo(std::format("Status Name:  {}", statusName.c_str()));
+    logInfo(std::format("Status Name:  {}", statusName));
 
     // KITTY_LOGI("Located PE:   %s", process->peScanner.isValid() ? "Yes" : "No");
 
@@ -42,11 +48,37 @@ int main(int argc, char* args[])
 
     logInfo("Step 2: Get process maps");
 
-    // std::vector<Map> maps = getValidMaps(pid);
-    // std::vector<Map> maps = getMaps(pid, processName);
+    // std::vector<Map> maps = getMaps(pid);
+    std::vector<Map> maps = getValidMaps(pid);
+    for (auto map : maps) {
+        logInfo(map.toString());
+    }
+    // Map map = maps.front();
+
     Map map = findMap(pid, processName);
 
     logInfo(map.toString());
+
+    if (map.isValid()) {
+        logInfo("Step 3: Read memory");
+
+        pe::DosHeader lol = {0};
+
+        KittyMemSys memSys;
+        memSys.init(pid);
+        size_t bytesRead = memSys.Read(map.startAddress, &lol, sizeof(lol));
+        std::cout << hex::toHex(&lol, sizeof(pe::DosHeader)) << std::endl;
+
+        KittyMemIO memIO;
+        memIO.init(pid);
+        memIO.Read(map.startAddress, &lol, sizeof(lol));
+        logInfo(std::format("KittyMemIO Read {} bytes at {:#x}", sizeof(lol), map.startAddress));
+        std::cout << hex::toHex(&lol, sizeof(pe::DosHeader)) << std::endl;
+
+        readMem(map.pid, map.startAddress, &lol, sizeof(lol));
+        logInfo(std::format("Fatigue Read {} bytes at {:#x}", sizeof(lol), map.startAddress));
+        std::cout << hex::toHex(&lol, sizeof(pe::DosHeader)) << std::endl;
+    }
 
     // KITTY_LOGI("Found map: %s", process->peScanner.getProcMap()->toString().c_str());
 

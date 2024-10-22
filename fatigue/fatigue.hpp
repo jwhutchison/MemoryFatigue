@@ -126,8 +126,7 @@ namespace fatigue {
      */
     Map findMapEndsWith(pid_t pid, const std::string& name);
 
-    /**
-     * Very basic memory read function, useful for checking magic bytes before sending to a region scanner
-     */
-    std::vector<int16_t> read(pid_t pid, uintptr_t address, size_t size);
+
+    bool readMem(pid_t pid, uintptr_t address, void* buffer, size_t size);
+
 } // namespace fatigue

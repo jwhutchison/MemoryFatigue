@@ -2,6 +2,7 @@
 #include <dirent.h>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include "fatigue.hpp"
 #include "log.hpp"
 
@@ -208,9 +209,30 @@ namespace fatigue {
 
     // Memory
 
-    std::vector<int16_t> read(pid_t pid, uintptr_t address, size_t size)
+    bool readMem(pid_t pid, uintptr_t address, void* buffer, size_t size)
     {
-        return {};
+        if (pid <= 0 || address <= 0 || size <= 0) return {};
+
+        std::filesystem::path path = std::format("/proc/{}/mem", pid);
+        std::ifstream file(path, std::ios::binary);
+        if (!file.is_open()) {
+            logError(std::format("Error opening /proc/{}/mem", pid));
+            return {};
+        }
+
+        file.seekg(address);
+        file.read(static_cast<char*>(buffer), size);
+
+        if (file.fail()) {
+            logError(std::format("Error reading /proc/{}/mem", pid));
+            return {};
+        }
+
+        logDebug(std::format("Read {} bytes from /proc/{}/mem at {:#x}", size, pid, address));
+
+        std::cout << ">> " << static_cast<char*>(buffer) << " <<" << std::endl;
+
+        return buffer;
     }
 
 } // namespace fatigue

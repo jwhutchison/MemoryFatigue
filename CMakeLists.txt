@@ -5,8 +5,8 @@ project(
     VERSION 1.0
     LANGUAGES CXX)
 
-# set(KITTYMEMORY_PATH KittyMemoryEx)
-# FILE(GLOB KITTYMEMORY_SRC ${KITTYMEMORY_PATH}/*.cpp)
+set(KITTYMEMORY_PATH include/KittyMemoryEx)
+FILE(GLOB KITTYMEMORY_SRC ${KITTYMEMORY_PATH}/*.cpp)
 
 set(FATIGUE_PATH fatigue)
 FILE(GLOB FATIGUE_SRC ${FATIGUE_PATH}/*.cpp)
@@ -24,10 +24,12 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -std=c++23 -DkNO_KEYSTONE")
 
 include_directories(
     ${FATIGUE_PATH}
+    include/
 )
 
 add_executable(
     fatigue
     main.cpp
     ${FATIGUE_SRC}
+    ${KITTYMEMORY_SRC}
 )

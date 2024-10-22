@@ -40,24 +40,24 @@ namespace fatigue {
     }
 
     namespace hex {
-    // Alias some very useful functions from KittyUtils
+        // Alias some very useful functions from KittyUtils
         // constexpr auto validateHex = KittyUtils::String::ValidateHex;
 
-    // /** Convert a chunk of data to its hexadecimal representation */
-    // std::string data2Hex(const void* data, const std::size_t dataLength);
-    // /** Convert a chunk of data to its hexadecimal representation, autosize */
-    // template <typename T>
-    // std::string data2Hex(const T &data) { return KittyUtils::data2Hex<T>(data); }
-    // /** Convert a hexadecimal string to a chunk of data */
-    // constexpr auto dataFromHex = KittyUtils::dataFromHex;
+        /** Convert a chunk of data to its hexadecimal representation */
+        std::string toHex(const void* data, const std::size_t length);
+        /** Convert a chunk of data to its hexadecimal representation, autosize */
+        template <typename T>
+        std::string toHex(const T &data) { return toHex(data, sizeof(T)); }
+        // /** Convert a hexadecimal string to a chunk of data */
+        // constexpr auto dataFromHex = KittyUtils::dataFromHex;
 
-    // /** Print HEX string from data; formatted uppercase with spaces between each byte pair */
-    // std::string data2PrettyHex(const void* data, const std::size_t length);
-    // /** Print HEX string from data; formatted uppercase with spaces between each byte pair, autosize */
-    // template <typename T>
-    // std::string data2PrettyHex(const T &data) { return data2PrettyHex(&data, sizeof(T)); }
+        // /** Print HEX string from data; formatted uppercase with spaces between each byte pair */
+        // std::string data2PrettyHex(const void* data, const std::size_t length);
+        // /** Print HEX string from data; formatted uppercase with spaces between each byte pair, autosize */
+        // template <typename T>
+        // std::string data2PrettyHex(const T &data) { return data2PrettyHex(&data, sizeof(T)); }
 
-    // template <std::size_t rowSize = 8, bool showASCII = true>
-    // std::string dumpHex(const void* data, std::size_t len) { KittyUtils::HexDump<rowSize, showASCII>(data, len); }
+        // template <std::size_t rowSize = 8, bool showASCII = true>
+        // std::string dumpHex(const void* data, std::size_t len) { KittyUtils::HexDump<rowSize, showASCII>(data, len); }
     } // namespace hex
 } // namespace fatigue

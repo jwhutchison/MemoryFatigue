@@ -7,7 +7,7 @@ namespace fatigue::pe {
     // PE (Portable Executable) format for Windows executables, DLLs, etc
     // See https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
 
-    const uint32_t DOS_MAGIC = 0x5A4D; // MZ
+    const uint16_t DOS_MAGIC = 0x5A4D; // MZ
     const uint32_t PE_SIGNATURE = 0x00004550; // PE\0\0
     const uint16_t PE32_MAGIC = 0x10B; // PE32
     const uint16_t PE32PLUS_MAGIC = 0x20B; // PE32+

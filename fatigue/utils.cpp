@@ -33,6 +33,24 @@ namespace fatigue {
         }
     } // namespace string
 
+
+    namespace hex {
+        std::string toHex(const void* data, const std::size_t length)
+        {
+            const unsigned char* bytes = static_cast<unsigned char const*>(data);
+            const char* hexmap = "0123456789ABCDEF";
+
+            std::string hex;
+            hex.reserve(length * 2);
+            for (std::size_t i = 0; i < length; ++i) {
+                hex.push_back(hexmap[(bytes[i] & 0xF0) >> 4]); // high nibble
+                hex.push_back(hexmap[(bytes[i] & 0x0F)]);      // low nibble
+            }
+            return hex;
+        }
+
+
+    } // namespace hex
     // std::string data2Hex(const void* data, const std::size_t length)
     // {
     //     return KittyUtils::data2Hex(data, length);
