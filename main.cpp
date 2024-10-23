@@ -75,11 +75,17 @@ int main(int argc, char* args[])
     if (map.isValid()) {
         logInfo("Step 3: Read memory");
 
+        mem::sys::Region region(map);
+
+
         pe::DosHeader lol = {0};
         size_t bytesRead = 0;
 
-        bytesRead = mem::sys::read(map.pid, map.startAddress, &lol, sizeof(lol));
-        logInfo(std::format("Fatigue Read2 {} bytes at {:#x}", sizeof(lol), map.startAddress));
+        // bytesRead = mem::sys::read(map.pid, map.start, &lol, sizeof(lol));
+        // bytesRead = mem::sys::read(map.pid, map.start, &lol);
+        // bytesRead = region.read(0, &lol, sizeof(lol));
+        bytesRead = region.read(0, &lol);
+        logInfo(std::format("Fatigue Read2 {} bytes at {:#x}", sizeof(lol), map.start));
         std::cout << hex::dump(&lol, sizeof(pe::DosHeader), 16) << std::endl;
     }
 

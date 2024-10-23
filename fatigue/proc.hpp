@@ -12,35 +12,35 @@ namespace fatigue::proc {
      */
     class Map {
     public:
-        pid_t pid;
-        unsigned long long startAddress;
-        unsigned long long endAddress;
+        pid_t pid{0};
+        unsigned long long start{0};
+        unsigned long long end{0};
         std::string perms;
-        unsigned long long offset;
+        unsigned long long offset{0};
         std::string dev;
-        unsigned long inode;
+        unsigned long inode{0};
         std::string pathname;
 
-        Map() : pid(0), startAddress(0), endAddress(0), offset(0), inode(0) {}
+        Map() = default;
 
-        inline size_t length() const { return endAddress - startAddress; }
+        inline size_t length() const { return end - start; }
         inline bool isReadable() const { return !perms.empty() && perms.at(0) == 'r'; }
         inline bool isWriteable() const { return !perms.empty() && perms.at(1) == 'w'; }
         inline bool isExecutable() const { return !perms.empty() && perms.at(2) == 'x'; }
         inline bool isPrivate() const { return !perms.empty() && perms.at(3) == 'p'; }
         inline bool isShared() const { return !perms.empty() && perms.at(3) == 's'; }
 
-        inline bool isValid() const { return (pid && startAddress && endAddress && length()); }
+        inline bool isValid() const { return (pid && start && end && length()); }
         inline bool isAnonymous() const { return pathname.empty(); }
         inline bool isPsuedo() const { return !perms.empty() && pathname.at(0) == '['; }
         inline bool isFile() const { return !isAnonymous() && !isPsuedo(); }
 
-        inline bool contains(uintptr_t address) const { return address >= startAddress && address < endAddress; }
+        inline bool contains(uintptr_t address) const { return address >= start && address < end; }
 
         inline std::string toString()
         {
             return std::format("{:#x}-{:#x} {}{}{}{} {:#x} {} {} {}",
-                               startAddress, endAddress,
+                               start, end,
                                isReadable() ? 'r' : '-', isWriteable() ? 'w' : '-', isExecutable() ? 'x' : '-', isPrivate() ? 'p' : 's',
                                offset, dev.c_str(), inode, pathname.c_str());
         }

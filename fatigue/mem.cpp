@@ -6,6 +6,44 @@
 #include "mem.hpp"
 
 namespace fatigue::mem {
+    namespace sys {
+        ssize_t read(pid_t pid, uintptr_t address, void* buffer, size_t size)
+        {
+            if (pid <= 0 || address <= 0 || size <= 0) return 0;
+
+            struct iovec local = { .iov_base = buffer, .iov_len = size };
+            struct iovec remote = { .iov_base = reinterpret_cast<void*>(address), .iov_len = size };
+
+            ssize_t bytesRead = process_vm_readv(pid, &local, 1, &remote, 1, 0);
+
+            return bytesRead;
+        }
+
+        ssize_t write(pid_t pid, uintptr_t address, const void* buffer, size_t size)
+        {
+            if (pid <= 0 || address <= 0 || size <= 0) return 0;
+
+            struct iovec local = { .iov_base = const_cast<void*>(buffer), .iov_len = size };
+            struct iovec remote = { .iov_base = reinterpret_cast<void*>(address), .iov_len = size };
+
+            ssize_t bytesWritten = process_vm_writev(pid, &local, 1, &remote, 1, 0);
+
+            return bytesWritten;
+        }
+
+        // sys::Region
+
+        ssize_t Region::read(uintptr_t offset, void* buffer, size_t size) const
+        {
+            return sys::read(m_pid, m_start + offset, buffer, size);
+        }
+        ssize_t Region::write(uintptr_t offset, const void* buffer, size_t size) const
+        {
+            return sys::write(m_pid, m_start + offset, buffer, size);
+        }
+
+    } // namespace sys
+
     namespace io {
         void attach(pid_t pid)
         {
@@ -59,31 +97,32 @@ namespace fatigue::mem {
 
             return bytesWritten;
         }
+
+        // io::Region
+
+        void Region::attach()
+        {
+            if (m_usePtrace && !m_attached)
+            {
+                io::attach(m_pid);
+                m_attached = true;
+            }
+        }
+        void Region::detach()
+        {
+            if (m_usePtrace && m_attached)
+            {
+                io::detach(m_pid);
+                m_attached = false;
+            }
+        }
+        ssize_t Region::read(uintptr_t offset, void* buffer, size_t size) const
+        {
+            return io::read(m_pid, m_start + offset, buffer, size, m_usePtrace);
+        }
+        ssize_t Region::write(uintptr_t offset, const void* buffer, size_t size) const
+        {
+            return io::write(m_pid, m_start + offset, buffer, size, m_usePtrace);
+        }
     } // namespace io
-
-    namespace sys {
-        ssize_t read(pid_t pid, uintptr_t address, void* buffer, size_t size)
-        {
-            if (pid <= 0 || address <= 0 || size <= 0) return 0;
-
-            struct iovec local = { .iov_base = buffer, .iov_len = size };
-            struct iovec remote = { .iov_base = reinterpret_cast<void*>(address), .iov_len = size };
-
-            ssize_t bytesRead = process_vm_readv(pid, &local, 1, &remote, 1, 0);
-
-            return bytesRead;
-        }
-
-        ssize_t write(pid_t pid, uintptr_t address, const void* buffer, size_t size)
-        {
-            if (pid <= 0 || address <= 0 || size <= 0) return 0;
-
-            struct iovec local = { .iov_base = const_cast<void*>(buffer), .iov_len = size };
-            struct iovec remote = { .iov_base = reinterpret_cast<void*>(address), .iov_len = size };
-
-            ssize_t bytesWritten = process_vm_writev(pid, &local, 1, &remote, 1, 0);
-
-            return bytesWritten;
-        }
-    } // namespace sys
 }

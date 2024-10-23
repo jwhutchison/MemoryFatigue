@@ -173,9 +173,9 @@ namespace fatigue::proc {
 
                 // Throwaway variable for the dash
                 char dash;
-                // (format) startAddress-endAddress perms offset dev inode pathname
+                // (format) start-end perms offset dev inode pathname
                 std::istringstream iss{line};
-                iss >> std::hex >> map.startAddress >> dash >> map.endAddress
+                iss >> std::hex >> map.start >> dash >> map.end
                     >> map.perms >> map.offset >> map.dev
                     >> std::dec >> map.inode >> map.pathname;
 
