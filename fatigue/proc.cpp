@@ -1,17 +1,11 @@
-#include <cstring>
-#include <dirent.h>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
+#include <thread>
 #include "fatigue.hpp"
 #include "log.hpp"
-#include <sys/ptrace.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <sys/uio.h>
 
-namespace fatigue {
+namespace fatigue::proc {
 
     std::map<std::string, std::string> getStatus(pid_t pid)
     {
@@ -139,6 +133,24 @@ namespace fatigue {
         });
     }
 
+    pid_t waitForProcess(std::function<pid_t()> getter, u_int timeout, u_int interval)
+    {
+        if (!getter) return 0;
+        if (timeout <= 0) return getter();
+
+        pid_t pid = 0;
+        while (pid <= 0) {
+            pid = getter();
+            if (pid <= 0) {
+                if (timeout-- <= 0) {
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::seconds(interval));
+            }
+        }
+        return pid;
+    }
+
     // Maps
 
     std::vector<Map> getMaps(pid_t pid, std::function<bool(Map&)> filter)
@@ -163,8 +175,9 @@ namespace fatigue {
                 char dash;
                 // (format) startAddress-endAddress perms offset dev inode pathname
                 std::istringstream iss{line};
-                iss >> map.startAddress >> dash >> map.endAddress
-                    >> map.perms >> map.offset >> map.dev >> map.inode >> map.pathname;
+                iss >> std::hex >> map.startAddress >> dash >> map.endAddress
+                    >> map.perms >> map.offset >> map.dev
+                    >> std::dec >> map.inode >> map.pathname;
 
                 if (!filter || filter(map)) {
                     maps.push_back(map);
@@ -180,7 +193,7 @@ namespace fatigue {
     std::vector<Map> getValidMaps(pid_t pid)
     {
         return getMaps(pid, [](Map& map) {
-            return map.isValid() && map.hasName();
+            return map.isValid() && !map.isAnonymous();
         });
     }
 
@@ -210,61 +223,5 @@ namespace fatigue {
         std::vector<Map> maps = getMapsEndsWith(pid, name);
         if (maps.empty()) return Map{};
         return maps.front();
-    }
-
-    // Memory
-
-    bool readMem(pid_t pid, uintptr_t address, void* buffer, size_t size)
-    {
-        if (pid <= 0 || address <= 0 || size <= 0) return {};
-
-        std::filesystem::path path = std::format("/proc/{}/mem", pid);
-        std::ifstream file(path, std::ios::binary);
-        if (!file.is_open()) {
-            logError(std::format("Error opening /proc/{}/mem", pid));
-            return {};
-        }
-
-        file.seekg(address);
-        file.read(static_cast<char*>(buffer), size);
-
-        if (file.fail()) {
-            logError(std::format("Error reading /proc/{}/mem", pid));
-            return {};
-        }
-
-        return buffer;
-    }
-
-    ssize_t readMem2(pid_t pid, uintptr_t address, void* buffer, size_t size)
-    {
-        if (pid <= 0 || address <= 0 || size <= 0) return {};
-
-        std::filesystem::path path = std::format("/proc/{}/mem", pid);
-        auto fd = open(path.c_str(), O_RDWR);
-
-        ptrace(PTRACE_ATTACH, pid, 0, 0);
-        waitpid(pid, NULL, 0);
-
-        ssize_t bytesRead = pread(fd, &buffer, size, address);
-        // pwrite(fd, &value, sizeof(value), addr);
-
-        ptrace(PTRACE_DETACH, pid, 0, 0);
-
-        close(fd);
-
-        return bytesRead;
-    }
-
-    ssize_t readMem3(pid_t pid, uintptr_t address, void* buffer, size_t size)
-    {
-        if (pid <= 0 || address <= 0 || size <= 0) return {};
-
-        struct iovec local = { .iov_base = buffer, .iov_len = size };
-        struct iovec remote = { .iov_base = reinterpret_cast<void*>(address), .iov_len = size };
-
-        ssize_t bytesRead = process_vm_readv(pid, &local, 1, &remote, 1, 0);
-
-        return bytesRead;
     }
 } // namespace fatigue

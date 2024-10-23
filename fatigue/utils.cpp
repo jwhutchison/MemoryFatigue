@@ -1,7 +1,7 @@
 #include <algorithm>
+#include <iomanip>
 #include <sstream>
 #include "utils.hpp"
-#include <iomanip>
 
 namespace fatigue {
 

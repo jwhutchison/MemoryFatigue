@@ -64,6 +64,6 @@ namespace fatigue {
         std::string toPrettyHex(const T &data) { return toPrettyHex(&data, sizeof(T)); }
 
         /** Print HEX dump from data; formatted with ASCII representation */
-        std::string dump(const void* data, std::size_t length, std::size_t rowSize = 8, bool showASCII = true);
+        std::string dump(const void* data, std::size_t length, std::size_t rowSize = 16, bool showASCII = true);
     } // namespace hex
 } // namespace fatigue
