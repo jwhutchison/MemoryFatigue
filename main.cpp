@@ -75,7 +75,7 @@ int main(int argc, char* args[])
     if (map.isValid()) {
         logInfo("Step 3: Read memory");
 
-        mem::sys::Region region(map);
+        Region region(map);
 
 
         pe::DosHeader lol = {0};

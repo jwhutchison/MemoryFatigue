@@ -30,18 +30,6 @@ namespace fatigue::mem {
 
             return bytesWritten;
         }
-
-        // sys::Region
-
-        ssize_t Region::read(uintptr_t offset, void* buffer, size_t size) const
-        {
-            return sys::read(m_pid, m_start + offset, buffer, size);
-        }
-        ssize_t Region::write(uintptr_t offset, const void* buffer, size_t size) const
-        {
-            return sys::write(m_pid, m_start + offset, buffer, size);
-        }
-
     } // namespace sys
 
     namespace io {
@@ -98,31 +86,48 @@ namespace fatigue::mem {
             return bytesWritten;
         }
 
-        // io::Region
+        // io::Batch
 
-        void Region::attach()
+        int Batch::start(pid_t pid, bool usePtrace)
         {
+            if (pid <= 0) return -1;
+            if (m_fd >= 0) stop();
+
+            m_pid = pid;
+            m_usePtrace = usePtrace;
+
             if (m_usePtrace && !m_attached)
             {
                 io::attach(m_pid);
                 m_attached = true;
             }
+
+            std::filesystem::path path = std::format("/proc/{}/mem", m_pid);
+            m_fd = open(path.c_str(), O_RDWR);
         }
-        void Region::detach()
+        void Batch::stop()
         {
+            if (m_fd >= 0)
+            {
+                close(m_fd);
+                m_fd = -1;
+            }
+
             if (m_usePtrace && m_attached)
             {
                 io::detach(m_pid);
                 m_attached = false;
             }
         }
-        ssize_t Region::read(uintptr_t offset, void* buffer, size_t size) const
+        ssize_t Batch::read(uintptr_t address, void* buffer, size_t size)
         {
-            return io::read(m_pid, m_start + offset, buffer, size, m_usePtrace);
+            if (m_fd < 0) return 0;
+            return pread64(m_fd, &buffer, size, address);
         }
-        ssize_t Region::write(uintptr_t offset, const void* buffer, size_t size) const
+        ssize_t Batch::write(uintptr_t address, const void* buffer, size_t size)
         {
-            return io::write(m_pid, m_start + offset, buffer, size, m_usePtrace);
+            if (m_fd < 0) return 0;
+            return pwrite64(m_fd, &buffer, size, address);
         }
     } // namespace io
 }
