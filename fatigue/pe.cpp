@@ -15,8 +15,7 @@ namespace fatigue::pe {
     }
 
     void PeMap::init() {
-        logInfo(std::format("Initializing PE map for {} {}", pid, name));
-        if (!isValid()) return;
+        if (!proc::Map::isValid()) return;
 
         // Read DOS header, and check if it's a DOS executable
         read(0, &m_dos, sizeof(m_dos));
@@ -45,35 +44,35 @@ namespace fatigue::pe {
         }
 
         // Read section headers
-        std::vector<SectionHeader> sections(m_coff.sectionCount);
+        logInfo(std::format("Reading {} section headers", m_coff.sectionCount));
+        m_sections.resize(m_coff.sectionCount);
         read(
             m_dos.coffHeaderOffset + sizeof(m_coff) + m_coff.optionalHeaderSize,
-            sections.data(),
+            m_sections.data(),
             sizeof(SectionHeader) * m_coff.sectionCount
         );
+        logInfo(hex::dump(m_sections.data(), sizeof(SectionHeader) * m_coff.sectionCount, 16));
     }
 
-    bool PeMap::isValid() const {
-        logInfo(std::format("Checking PE map for {} {}", pid, name));
-        if (!proc::Map::isValid()) return false;
-        logInfo(std::format("Checking PE map for {} {} 2", pid, name));
-        if (m_dos.magic != DOS_MAGIC) return false;
-        logInfo(std::format("Checking PE map for {} {} 3", pid, name));
-        if (m_coff.signature != PE_SIGNATURE) return false;
-        logInfo(std::format("Checking PE map for {} {} 4", pid, name));
-        if (m_optional.magic != PE32_MAGIC && m_optional.magic != PE32PLUS_MAGIC) return false;
-        logInfo(std::format("Checking PE map for {} {} 5", pid, name));
-        return true;
+    std::vector<Region> PeMap::getSections()
+    {
+        std::vector<Region> sections;
+        for (auto &it : m_sections) {
+            std::string name(it.name, sizeof(it.name));
+            name = string::trim(name);
+            sections.push_back(Region(pid, it.virtualAddress, it.virtualAddress + it.virtualSize, name));
+        }
+        return sections;
     }
 
     Region PeMap::getSection(const std::string_view &name)
     {
-        for (auto &it : m_sections) {
+        for (auto &it : getSections()) {
             // if secion name starts with a ., match with or without the dot
-            if (name == it.name || (name[0] != '.' && name == std::string(it.name + 1))) {
-                return Region(pid, it.virtualAddress, it.virtualAddress + it.virtualSize, it.name);
-            }
+            if (name == it.name || (name[0] != '.' && name == it.name.substr(1)))
+                return it;
         }
+        // Return an invalid region if not found
         return Region();
     }
 } // namespace fatigue::pe

@@ -18,8 +18,8 @@ void testLog() {
 int main(int argc, char* args[])
 {
     // log::setLogFormat(log::LogFormat::Default);
-    log::setLogFormat(log::LogFormat::Compact);
-    // log::setLogFormat(log::LogFormat::Tiny);
+    // log::setLogFormat(log::LogFormat::Compact);
+    log::setLogFormat(log::LogFormat::Tiny);
     log::setLogLevel(log::LogLevel::Debug);
 
     // testLog();
@@ -93,7 +93,7 @@ int main(int argc, char* args[])
         logInfo(std::format("COFF Header: {:#x}", peMap.coff().signature));
         logInfo(std::format("Optional Header: {:#x}", peMap.optional().magic));
 
-        for (auto section : peMap.sections()) {
+        for (auto section : peMap.getSections()) {
             logInfo(std::format("Section: {}", section.name));
         }
     }

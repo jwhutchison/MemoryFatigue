@@ -42,7 +42,7 @@ namespace fatigue::pe {
         char name[8];
         uint32_t virtualSize;
         uint32_t virtualAddress;
-        uint8_t ignored[24];
+        uint8_t ignored[24]; // Allows a block read to fetch all section headers
     };
 
     bool isValidPE(pid_t pid, uintptr_t address);
@@ -67,8 +67,18 @@ namespace fatigue::pe {
         std::vector<SectionHeader> sections() const { return m_sections; }
 
         void init();
-        bool isValid() const;
-        Region getSection(const std::string_view &name);
+
+        inline bool isValidDos() const { return m_dos.magic == DOS_MAGIC; }
+        inline bool isValidCoff() const { return m_coff.signature == PE_SIGNATURE; }
+        inline bool isValidOptional() const { return m_optional.magic == PE32_MAGIC || m_optional.magic == PE32PLUS_MAGIC; }
+
+        inline bool isValid() const
+        {
+            return proc::Map::isValid() && isValidDos() && isValidCoff() && isValidOptional();
+        }
+
+        std::vector<Region> getSections();
+        Region getSection(const std::string_view &name = ".text");
     };
 
 } // namespace fatigue::pe
