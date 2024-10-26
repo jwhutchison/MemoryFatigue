@@ -22,38 +22,45 @@ namespace fatigue {
             const char* h = static_cast<const char*>(haystack);
             const char* n = static_cast<const char*>(needle);
 
-            for (size_t i = 0; i < haystackSize;)
+            for (uintptr_t i = 0; i < haystackSize; /* increment in loop */)
             {
-                // While comparing the needle against the haystack, we look at the next few bytes,
+                // While comparing the needle against the haystack, we look at the next few haystack bytes,
                 // so we might as well consider the next possible match while we are looking at this one.
                 // If we see the first byte of the needle, we can skip ahead to that byte in the next iteration,
-                // also if we don't see the first byte ever, we can skip ahead as far as we've looked
-                int offsetAdjust = 0;
+                // and if we don't see the first byte (match or break), we can skip ahead as far as we've looked
+                // 0 means we haven't seen it; >0 means we have, so don't change it again
+                int inc = 0;
 
                 // Check each byte in the needle against the haystack starting at i
-                for (size_t j = 0; j < needleSize; j++)
+                for (uintptr_t j = 0; j < needleSize; j++)
                 {
                     // If the needle byte is a mask wildcard, skip checks
                     bool masked = mask.length() > j && mask.at(j) == '?';
 
-                    // If current haystack byte is the same as the first needle byte, set offset for next iteration
+                    // If current haystack byte is the same as the first needle byte, set inc for next iteration
                     if (!masked && j > 0 && h[i + j] == n[0]) {
-                        offsetAdjust = j;
+                        // Only set the inc if we haven't seen it yet
+                        if (inc == 0) inc = j;
                     }
 
                     // if the current needle byte is not the same as the haystack byte, range is not a match
                     if (!masked && n[j] != h[i + j])
                     {
-                        // If offset is 0, it means we never saw the first byte of the needle, so we can start here
-                        if (offsetAdjust == 0)
-                            offsetAdjust = j;
+                        // Never saw the first byte of the needle, so skip ahead to the next byte
+                        if (inc == 0) inc = j + 1;
+
                         break;
                     }
 
                     // If we've reached the end of the needle, we have a match
                     if (j == needleSize - 1)
                     {
-                        found.push_back(reinterpret_cast<uintptr_t>(i));
+                        // Never saw the first byte of the needle, so skip ahead to the next byte
+                        if (inc == 0) inc = j + 1;
+
+                        // Add the offset of the match to the result
+                        found.push_back(i);
+
                         // If we only want the first match, return now
                         if (first)
                             return found;
@@ -61,7 +68,7 @@ namespace fatigue {
                 }
 
                 // Skip ahead to the next instance of the first byte if found in the needle, or the next byte
-                i += offsetAdjust > 0 ? offsetAdjust : 1;
+                i += inc > 0 ? inc : 1;
             }
 
             return found;
