@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <sys/types.h>
-#include "proc.hpp"
 
 /**
  * Dead simple memory reading and writing for Linux processes

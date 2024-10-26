@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace fatigue {
     namespace color {
@@ -30,6 +31,13 @@ namespace fatigue {
         }
     } // namespace color
 
+    namespace search {
+        /** Search for a byte pattern in a memory range */
+        std::vector<uintptr_t> search(const void* haystack, size_t haystackSize,
+                                      const void* needle, size_t needleSize,
+                                      std::string_view mask = "", bool first = false);
+    } // namespace search
+
     namespace string {
         /** Return an uppercase copy of a string */
         std::string toUpper(const std::string &str);
@@ -47,7 +55,7 @@ namespace fatigue {
         /** Prettify a hexadecimal string with spaces between each byte pair */
         std::string prettify(const std::string &hex);
         /** Convert a hexadecimal string to its ASCII representation */
-        std::string asciify(std::string &hex);
+        std::string toAscii(const void* data, const std::size_t length);
 
         /** Convert a chunk of data to its hexadecimal representation */
         std::string toHex(const void* data, const std::size_t length);

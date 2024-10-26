@@ -75,18 +75,24 @@ int main(int argc, char* args[])
     if (map.isValid()) {
         logInfo("Step 3: Read memory");
 
-        Region region(map);
-
-
         pe::DosHeader lol = {0};
         size_t bytesRead = 0;
 
         // bytesRead = mem::sys::read(map.pid, map.start, &lol, sizeof(lol));
         // bytesRead = mem::sys::read(map.pid, map.start, &lol);
         // bytesRead = region.read(0, &lol, sizeof(lol));
-        bytesRead = region.read(0, &lol);
+        bytesRead = map.read(0, &lol);
         logInfo(std::format("Fatigue Read2 {} bytes at {:#x}", sizeof(lol), map.start));
         std::cout << hex::dump(&lol, sizeof(pe::DosHeader), 16) << std::endl;
+    }
+
+    std::string haystack = "ABCDEFGABCDABCDABC";
+    std::string needle = "ABCDAB";
+
+    std::vector<uintptr_t> found = search::search(haystack.c_str(), haystack.size(), needle.c_str(), needle.size(), "", false);
+
+    for (auto f : found) {
+        logInfo(std::format("Found {} at offset {}", needle, f));
     }
 
     // KITTY_LOGI("Found map: %s", process->peScanner.getProcMap()->toString().c_str());

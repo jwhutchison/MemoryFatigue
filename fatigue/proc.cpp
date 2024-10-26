@@ -177,7 +177,7 @@ namespace fatigue::proc {
                 std::istringstream iss{line};
                 iss >> std::hex >> map.start >> dash >> map.end
                     >> map.perms >> map.offset >> map.dev
-                    >> std::dec >> map.inode >> map.pathname;
+                    >> std::dec >> map.inode >> map.name;
 
                 if (!filter || filter(map)) {
                     maps.push_back(map);
@@ -200,14 +200,14 @@ namespace fatigue::proc {
     std::vector<Map> getMaps(pid_t pid, const std::string& name)
     {
         return getMaps(pid, [&name](Map& map) {
-            return map.isValid() && map.pathname.contains(name);
+            return map.isValid() && map.name.contains(name);
         });
     }
 
     std::vector<Map> getMapsEndsWith(pid_t pid, const std::string& name)
     {
         return getMaps(pid, [&name](Map& map) {
-            return map.isValid() && map.pathname.ends_with(name);
+            return map.isValid() && map.name.ends_with(name);
         });
     }
 

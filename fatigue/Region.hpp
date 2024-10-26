@@ -1,16 +1,13 @@
 #pragma once
 
+#include <string>
+#include "mem.hpp"
+
 #ifndef DEFAULT_MEMORY_ACCESS_METHOD
 #define DEFAULT_MEMORY_ACCESS_METHOD fatigue::mem::AccessMethod::SYS
 #endif
 
-#include "mem.hpp"
-
-using namespace fatigue::mem;
-
 namespace fatigue {
-    // TODO: HERE make this a real class, use an enum to select the method
-
     /**
      * @brief Memory region in a process
      * Represents a region of memory in a process, e.g. a mapped file, heap, stack, etc
@@ -19,31 +16,26 @@ namespace fatigue {
      * Virtual base class for different memory access methods, use either io::Region or sys::Region
      */
     class Region {
-    protected:
-        std::string m_name;
-        pid_t m_pid{0};
-        unsigned long long m_start{0};
-        unsigned long long m_end{0};
     public:
+        mem::AccessMethod method{mem::AccessMethod::SYS};
+
+        std::string name;
+        pid_t pid{0};
+        unsigned long long start{0};
+        unsigned long long end{0};
+
         Region() = default;
         Region(pid_t pid, uintptr_t start, uintptr_t end)
-            : m_pid(pid), m_start(start), m_end(end) {}
+            : pid(pid), start(start), end(end) {}
         Region(pid_t pid, uintptr_t start, uintptr_t end, const std::string& name)
-            : m_pid(pid), m_start(start), m_end(end), m_name(name) {}
-        Region(const proc::Map& map)
-            : Region(map.pid, map.start, map.end, map.pathname) {}
+            : pid(pid), start(start), end(end), name(name) {}
         ~Region() = default;
 
-        AccessMethod method{DEFAULT_MEMORY_ACCESS_METHOD};
+        inline size_t size() const { return end - start; }
+        inline bool isValid() const { return pid > 0 && start > 0 && end > 0 && end > start; }
+        inline bool contains(uintptr_t address) const { return address >= start && address < end; }
 
-        inline const std::string& name() const { return m_name; }
-        inline pid_t pid() const { return m_pid; }
-        inline uintptr_t start() const { return m_start; }
-        inline uintptr_t end() const { return m_end; }
-        inline size_t size() const { return m_end - m_start; }
-
-        inline bool isValid() const { return m_pid > 0 && m_start > 0 && m_end > 0; }
-        inline bool contains(uintptr_t address) const { return address >= m_start && address < m_end; }
+        // Read and write
 
         ssize_t read(uintptr_t offset, void* buffer, size_t size) const;
         ssize_t write(uintptr_t offset, const void* buffer, size_t size) const;
@@ -58,5 +50,14 @@ namespace fatigue {
         {
             return write(offset, value, sizeof(T));
         }
+
+        // Pattern scanning
+        // TODO: Need PE sections first, eedjit
+        // std::vector<uintptr_t> findBytesAll(const char* bytes, const std::string& mask) const;
+        // uintptr_t findBytesFirst(const char* bytes, const std::string& mask) const;
+        // std::vector<uintptr_t> findHexAll(std::string hex, const std::string& mask) const;
+        // uintptr_t findHexFirst(std::string hex, const std::string& mask) const;
+        // std::vector<uintptr_t> findPatternAll(const std::string& pattern) const;
+        // uintptr_t findPatternFirst(const std::string& pattern) const;
     };
 } // namespace fatigue

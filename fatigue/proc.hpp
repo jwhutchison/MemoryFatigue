@@ -5,44 +5,38 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "Region.hpp"
 
 namespace fatigue::proc {
-    /**
-     * See KittyMemoryEx::ProcMap
-     */
-    class Map {
+    class Map : public Region
+    {
     public:
-        pid_t pid{0};
-        unsigned long long start{0};
-        unsigned long long end{0};
         std::string perms;
         unsigned long long offset{0};
         std::string dev;
         unsigned long inode{0};
-        std::string pathname;
 
         Map() = default;
+        Map(pid_t pid, uintptr_t start, uintptr_t end, const std::string& perms, unsigned long long offset, const std::string& dev, unsigned long inode, const std::string& name)
+            : Region(pid, start, end, name), perms(perms), offset(offset), dev(dev), inode(inode) {}
+        ~Map() = default;
 
-        inline size_t length() const { return end - start; }
-        inline bool isReadable() const { return !perms.empty() && perms.at(0) == 'r'; }
-        inline bool isWriteable() const { return !perms.empty() && perms.at(1) == 'w'; }
-        inline bool isExecutable() const { return !perms.empty() && perms.at(2) == 'x'; }
+        inline bool isRead() const { return !perms.empty() && perms.at(0) == 'r'; }
+        inline bool isWrite() const { return !perms.empty() && perms.at(1) == 'w'; }
+        inline bool isExec() const { return !perms.empty() && perms.at(2) == 'x'; }
         inline bool isPrivate() const { return !perms.empty() && perms.at(3) == 'p'; }
         inline bool isShared() const { return !perms.empty() && perms.at(3) == 's'; }
 
-        inline bool isValid() const { return (pid && start && end && length()); }
-        inline bool isAnonymous() const { return pathname.empty(); }
-        inline bool isPsuedo() const { return !perms.empty() && pathname.at(0) == '['; }
+        inline bool isAnonymous() const { return name.empty(); }
+        inline bool isPsuedo() const { return !perms.empty() && name.at(0) == '['; }
         inline bool isFile() const { return !isAnonymous() && !isPsuedo(); }
-
-        inline bool contains(uintptr_t address) const { return address >= start && address < end; }
 
         inline std::string toString()
         {
             return std::format("{:#x}-{:#x} {}{}{}{} {:#x} {} {} {}",
                                start, end,
-                               isReadable() ? 'r' : '-', isWriteable() ? 'w' : '-', isExecutable() ? 'x' : '-', isPrivate() ? 'p' : 's',
-                               offset, dev.c_str(), inode, pathname.c_str());
+                               isRead() ? 'r' : '-', isWrite() ? 'w' : '-', isExec() ? 'x' : '-', isPrivate() ? 'p' : 's',
+                               offset, dev.c_str(), inode, name.c_str());
         }
     };
 
