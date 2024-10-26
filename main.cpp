@@ -1,7 +1,6 @@
 #include <format>
 #include <string>
 #include "fatigue.hpp"
-#include "pe.hpp"
 
 // #include "KittyMemoryEx/KittyMemoryMgr.hpp"
 
@@ -72,8 +71,8 @@ int main(int argc, char* args[])
 
     logInfo(map.toString());
 
+    logInfo("Step 3: Read memory");
     if (map.isValid()) {
-        logInfo("Step 3: Read memory");
 
         pe::DosHeader lol = {0};
         size_t bytesRead = 0;
@@ -86,14 +85,27 @@ int main(int argc, char* args[])
         std::cout << hex::dump(&lol, sizeof(pe::DosHeader), 16) << std::endl;
     }
 
-    std::string haystack = "ABCDEFGABCDABCDABC";
-    std::string needle = "ABCDAB";
+    logInfo("Step 4: Read PE headers");
+    pe::PeMap peMap(map);
+    if (peMap.isValid()) {
 
-    std::vector<uintptr_t> found = search::search(haystack.c_str(), haystack.size(), needle.c_str(), needle.size(), "", false);
+        logInfo(std::format("DOS Header: {:#x}", peMap.dos().magic));
+        logInfo(std::format("COFF Header: {:#x}", peMap.coff().signature));
+        logInfo(std::format("Optional Header: {:#x}", peMap.optional().magic));
 
-    for (auto f : found) {
-        logInfo(std::format("Found {} at offset {}", needle, f));
+        for (auto section : peMap.sections()) {
+            logInfo(std::format("Section: {}", section.name));
+        }
     }
+
+    // std::string haystack = "ABCDEFGABCDABCDABC";
+    // std::string needle = "ABCDAB";
+
+    // std::vector<uintptr_t> found = search::search(haystack.c_str(), haystack.size(), needle.c_str(), needle.size(), "", false);
+
+    // for (auto f : found) {
+    //     logInfo(std::format("Found {} at offset {}", needle, f));
+    // }
 
     // KITTY_LOGI("Found map: %s", process->peScanner.getProcMap()->toString().c_str());
 

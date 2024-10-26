@@ -2,6 +2,7 @@
 
 #include "log.hpp"
 #include "utils.hpp"
-#include "proc.hpp"
 #include "mem.hpp"
 #include "Region.hpp"
+#include "proc.hpp"
+#include "pe.hpp"

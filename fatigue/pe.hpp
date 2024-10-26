@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include "Region.hpp"
 #include "proc.hpp"
 
 /**
@@ -46,4 +47,28 @@ namespace fatigue::pe {
 
     bool isValidPE(pid_t pid, uintptr_t address);
     bool isValidPE(proc::Map& map);
+
+    class PeMap : public proc::Map {
+    protected:
+        DosHeader m_dos;
+        CoffHeader m_coff;
+        CoffOptionalHeader m_optional;
+        std::vector<SectionHeader> m_sections;
+    public:
+        PeMap() = default;
+        PeMap(proc::Map& map) : proc::Map(map) {
+            init();
+        }
+        ~PeMap() = default;
+
+        DosHeader dos() const { return m_dos; }
+        CoffHeader coff() const { return m_coff; }
+        CoffOptionalHeader optional() const { return m_optional; }
+        std::vector<SectionHeader> sections() const { return m_sections; }
+
+        void init();
+        bool isValid() const;
+        Region getSection(const std::string_view &name);
+    };
+
 } // namespace fatigue::pe
