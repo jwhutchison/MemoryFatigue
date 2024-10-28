@@ -5,8 +5,8 @@ project(
     VERSION 1.0
     LANGUAGES CXX)
 
-set(KITTYMEMORY_PATH include/KittyMemoryEx)
-FILE(GLOB KITTYMEMORY_SRC ${KITTYMEMORY_PATH}/*.cpp)
+# set(KITTYMEMORY_PATH include/KittyMemoryEx)
+# FILE(GLOB KITTYMEMORY_SRC ${KITTYMEMORY_PATH}/*.cpp)
 
 set(FATIGUE_PATH fatigue)
 FILE(GLOB FATIGUE_SRC ${FATIGUE_PATH}/*.cpp)
@@ -31,5 +31,5 @@ add_executable(
     fatigue
     main.cpp
     ${FATIGUE_SRC}
-    ${KITTYMEMORY_SRC}
+    # ${KITTYMEMORY_SRC}
 )

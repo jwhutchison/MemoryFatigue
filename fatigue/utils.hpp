@@ -32,28 +32,84 @@ namespace fatigue {
     } // namespace color
 
     namespace search {
-        /** Search for a byte pattern in a memory range */
+        struct Pattern {
+            std::vector<unsigned char> bytes;
+            std::string mask;
+        };
+
+        /**
+         * Convert a hex based pattern to a byte array and mask
+         * example: "AA BB ?? CC" -> {0xAA, 0xBB, 0x00, 0xCC}, "..??.."
+         */
+        Pattern parsePattern(std::string_view hex);
+
+        /**
+         * Search for a byte pattern in a memory range
+         * @param haystack Pointer to the memory range to search
+         * @param haystackSize Size of the memory range to search
+         * @param needle Pointer to the byte pattern to search for
+         * @param needleSize Size of the byte pattern to search for
+         * @param mask Optional mask for ignoring certain bytes using '?' for wildcards
+         *             example: "..??.." will check bytes 1, 2, 5, 6, but bytes 3 and 4 will always match
+         * @param first If true, stop searching after the first match
+         */
         std::vector<uintptr_t> search(const void* haystack, size_t haystackSize,
                                       const void* needle, size_t needleSize,
                                       std::string_view mask = "", bool first = false);
+
+        /**
+         * Search for a byte pattern in a memory range using a Pattern struct
+         * (mostly used for hex strings passed through parsePattern)
+         * @param haystack Pointer to the memory range to search
+         * @param haystackSize Size of the memory range to search
+         * @param pattern Byte pattern to search for (@see parsePattern)
+         * @param first If true, stop searching after the first match
+         */
+        inline std::vector<uintptr_t> search(const void* haystack, size_t haystackSize,
+                                             const Pattern& pattern, bool first = false)
+        {
+            return search(haystack, haystackSize, pattern.bytes.data(), pattern.bytes.size(), pattern.mask, first);
+        }
+
+        /**
+         * Search for a byte pattern in a memory range using a hexadecimal string
+         * Spaces are ignored. Wildcard bytes are allowed using "??" (not '?')
+         * @example "AA BB ?? CC" will search for 0xAA, 0xBB, any byte, 0xCC
+         * @param haystack Pointer to the memory range to search
+         * @param haystackSize Size of the memory range to search
+         * @param hex Hexadecimal string pattern to search for
+         * @param first If true, stop searching after the first match
+         */
+        inline std::vector<uintptr_t> search(const void* haystack, size_t haystackSize,
+                                             std::string_view hex, bool first = false)
+        {
+            return search(haystack, haystackSize, parsePattern(hex), first);
+        }
+
     } // namespace search
 
     namespace string {
         /** Return an uppercase copy of a string */
-        std::string toUpper(const std::string &str);
+        std::string toUpper(std::string_view str);
         /** Return a lowercase copy of a string */
-        std::string toLower(const std::string &str);
+        std::string toLower(std::string_view str);
         /** Copy a string and trim leading and trailing spaces and unprintable characters */
-        std::string trim(std::string &str);
+        std::string trim(std::string_view str);
         /** Copy a string and remove all spaces */
-        std::string compact(std::string &str);
+        std::string compact(std::string_view str);
     }
 
     namespace hex {
-        /** Check if a string is a valid hexadecimal string */
-        bool isValid(const std::string &hex);
+        /**
+         * Check if a string is a valid hexadecimal string
+         * @param hex The string to check
+         * @param strict If true, only allow valid hex characters, otherwise '?' is also allowed
+         */
+        bool isValid(std::string_view hex, bool strict = false);
+        /** Split a hexadecimal string into a vector of byte pairs */
+        std::vector<std::string> split(std::string_view hex);
         /** Prettify a hexadecimal string with spaces between each byte pair */
-        std::string prettify(const std::string &hex);
+        std::string prettify(std::string_view hex);
         /** Convert a hexadecimal string to its ASCII representation */
         std::string toAscii(const void* data, const std::size_t length);
 
@@ -62,8 +118,9 @@ namespace fatigue {
         /** Convert a chunk of data to its hexadecimal representation, autosize */
         template <typename T>
         std::string toHex(const T &data) { return toHex(data, sizeof(T)); }
+
         /** Convert a hexadecimal string to a chunk of data */
-        void parse(const std::string &hex, void* buffer);
+        std::vector<unsigned char> parse(std::string_view hex);
 
         /** Print HEX string from data; formatted uppercase with spaces between each byte pair */
         inline std::string toPrettyHex(const void* data, const std::size_t length) { return prettify(toHex(data, length)); }

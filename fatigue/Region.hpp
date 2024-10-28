@@ -1,11 +1,14 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "mem.hpp"
 
 #ifndef DEFAULT_MEMORY_ACCESS_METHOD
 #define DEFAULT_MEMORY_ACCESS_METHOD fatigue::mem::AccessMethod::SYS
 #endif
+
+using namespace fatigue::mem;
 
 namespace fatigue {
     /**
@@ -17,7 +20,7 @@ namespace fatigue {
      */
     class Region {
     public:
-        mem::AccessMethod method{mem::AccessMethod::SYS};
+        AccessMethod method{AccessMethod::SYS};
 
         std::string name;
         pid_t pid{0};
@@ -52,12 +55,18 @@ namespace fatigue {
         }
 
         // Pattern scanning
-        // TODO: Need PE sections first, eedjit
-        // std::vector<uintptr_t> findBytesAll(const char* bytes, const std::string& mask) const;
-        // uintptr_t findBytesFirst(const char* bytes, const std::string& mask) const;
-        // std::vector<uintptr_t> findHexAll(std::string hex, const std::string& mask) const;
-        // uintptr_t findHexFirst(std::string hex, const std::string& mask) const;
-        // std::vector<uintptr_t> findPatternAll(const std::string& pattern) const;
-        // uintptr_t findPatternFirst(const std::string& pattern) const;
+        std::vector<uintptr_t> find(const void* pattern, size_t patternSize, const std::string& mask, bool first = false) const;
+        inline uintptr_t findFirst(const void* pattern, size_t patternSize, const std::string& mask) const
+        {
+            auto found = find(pattern, patternSize, mask, true);
+            return found.empty() ? 0 : found.front();
+        }
+
+        std::vector<uintptr_t> find(std::string_view pattern, bool first = false) const;
+        inline uintptr_t findFirst(std::string_view pattern) const
+        {
+            auto found = find(pattern, true);
+            return found.empty() ? 0 : found.front();
+        }
     };
 } // namespace fatigue

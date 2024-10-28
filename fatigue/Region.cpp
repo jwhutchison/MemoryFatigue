@@ -1,6 +1,7 @@
-#include "mem.hpp"
-#include "Region.hpp"
 #include <stdexcept>
+#include "mem.hpp"
+#include "utils.hpp"
+#include "Region.hpp"
 
 using namespace fatigue::mem;
 
@@ -31,5 +32,33 @@ namespace fatigue {
         } else {
             throw std::runtime_error("Invalid memory access method");
         }
+    }
+
+    std::vector<uintptr_t> Region::find(const void* pattern, size_t patternSize, const std::string& mask, bool first) const
+    {
+        if (!isValid() || !pattern || patternSize == 0) return {};
+
+        // Copy the memory region into a buffer
+        // TODO: Consider caching this, or maybe split the search into chunks
+        std::vector<unsigned char> buffer;
+        buffer.reserve(size());
+        read(0, buffer.data(), size());
+
+        // Search the buffer for the pattern
+        return search::search(buffer.data(), size(), pattern, patternSize, mask, first);
+    }
+
+    std::vector<uintptr_t> Region::find(std::string_view pattern, bool first) const
+    {
+        if (!isValid() || pattern.empty()) return {};
+
+        // Copy the memory region into a buffer
+        // TODO: Consider caching this, or maybe split the search into chunks
+        std::vector<unsigned char> buffer;
+        buffer.reserve(size());
+        read(0, buffer.data(), size());
+
+        // Search the buffer for the pattern
+        return search::search(buffer.data(), size(), pattern, first);
     }
 } // namespace fatigue

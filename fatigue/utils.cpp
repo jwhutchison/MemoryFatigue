@@ -7,10 +7,36 @@
 
 namespace fatigue {
     namespace search {
+        Pattern parsePattern(std::string_view hex)
+        {
+            std::vector<std::string> in = hex::split(hex);
+
+            if (in.empty())
+                return Pattern();
+
+            Pattern out;
+            out.bytes.reserve(in.size());
+
+            for (auto& byte : in) {
+                if (byte == "??") {
+                    out.bytes.push_back(0);
+                    out.mask += "?";
+                } else {
+                    out.bytes.push_back(static_cast<unsigned char>(std::stoi(byte, nullptr, 16)));
+                    out.mask += ".";
+                }
+            }
+
+            return out;
+        }
+
+
         std::vector<uintptr_t> search(const void* haystack, size_t haystackSize,
                                       const void* needle, size_t needleSize,
                                       std::string_view mask, bool first)
         {
+            logDebug(std::format("search::search {} {} {}", haystackSize, needleSize, mask));
+
             std::vector<uintptr_t> found = {};
 
             if (!mask.empty() && mask.at(0) == '?')
@@ -19,8 +45,8 @@ namespace fatigue {
             if (!haystack || !needle || haystackSize < 1 || needleSize < 1)
                 return found;
 
-            const char* h = static_cast<const char*>(haystack);
-            const char* n = static_cast<const char*>(needle);
+            const unsigned char* h = static_cast<const unsigned char*>(haystack);
+            const unsigned char* n = static_cast<const unsigned char*>(needle);
 
             for (uintptr_t i = 0; i < haystackSize; /* increment in loop */)
             {
@@ -76,21 +102,21 @@ namespace fatigue {
     } // namespace search
 
     namespace string {
-        std::string toUpper(const std::string &str)
+        std::string toUpper(std::string_view str)
         {
             std::string out = std::string(str);
             std::transform(out.cbegin(), out.cend(), out.begin(), ::toupper);
             return out;
         }
 
-        std::string toLower(const std::string &str)
+        std::string toLower(std::string_view str)
         {
             std::string out = std::string(str);
             std::transform(out.cbegin(), out.cend(), out.begin(), ::tolower);
             return out;
         }
 
-        std::string trim(std::string &str)
+        std::string trim(std::string_view str)
         {
             std::string out = std::string(str);
 
@@ -104,7 +130,7 @@ namespace fatigue {
             return out;
         }
 
-        std::string compact(std::string &str)
+        std::string compact(std::string_view str)
         {
             std::string out = string::trim(str);
             out.erase(std::remove_if(out.begin(), out.end(), isspace), out.end());
@@ -114,21 +140,62 @@ namespace fatigue {
 
 
     namespace hex {
-        bool isValid(const std::string &hex)
+        bool isValid(std::string_view hex, bool strict)
         {
-            return hex.size() > 0 && hex.size() % 2 == 0
-                && hex.find_first_not_of("0123456789ABCDEFabcdef") == std::string::npos;
+            // Remove spaces (so that count is accurate)
+            std::string in = string::compact(hex);
+
+            // Must be an even number of characters
+            if (in.empty() && in.size() % 2 != 0) return false;
+
+            // Must not contain wildcards if strict
+            if (strict && in.find('?') != std::string::npos) return false;
+
+            // Must contain only valid hex characters
+            std::string allowed = "0123456789ABCDEFabcdef?";
+            if (in.find_first_not_of(allowed) != std::string::npos) return false;
+
+            // Do any necessary checks on pairs of characters
+            for (size_t i = 0; i < in.length(); i += 2) {
+                std::string pair = in.substr(i, 2);
+                // ? must be in pairs, so single ? is invalid
+                if (std::count(pair.begin(), pair.end(), '?') == 1)
+                    return false;
+            }
+
+            return true;
         }
 
-        std::string prettify(const std::string &hex)
+        std::vector<std::string> split(std::string_view hex)
         {
+            if (!isValid(hex))
+                return {};
+
+            // remove spaces
+            std::string in = string::compact(hex);
+
+            // Split into pairs of characters
+            std::vector<std::string> out;
+            out.reserve(in.size() / 2);
+
+            for (size_t i = 0; i < in.length(); i += 2) {
+                out.push_back(in.substr(i, 2));
+            }
+
+            return out;
+        }
+
+        std::string prettify(std::string_view hex)
+        {
+            if (!isValid(hex))
+                return "";
+
             std::string in = string::toUpper(hex);
 
             std::string out;
             out.reserve(in.size() + in.size() / 2);
-
             // Add spaces between each byte
-            for (int i = 0; i < in.size(); i += 2) {
+            for (std::size_t i = 0; i < in.size(); i += 2) {
                 out += in.substr(i, 2) + " ";
             }
 
@@ -170,22 +237,23 @@ namespace fatigue {
             return hex;
         }
 
-        void parse(const std::string &hex, void* buffer)
+        std::vector<unsigned char> parse(std::string_view hex)
         {
-            if (!buffer || !isValid(hex))
-                return;
+            // Must be actual hex, no wildcards
+            if (!isValid(hex, true))
+                return {};
 
-            // remove spaces
-            std::string pruned = std::string(hex);
-            pruned.erase(remove_if(pruned.begin(), pruned.end(), isspace), pruned.end());
+            // Convert each byte pair to a byte data
+            std::vector<std::string> in = split(hex);
 
-            // For each hex pair, parse two characters to a byte and store in buffer
-            auto* bytes = reinterpret_cast<unsigned char*>(buffer);
-            for (size_t i = 0; i < pruned.length(); i += 2)
+            std::vector<unsigned char> out;
+            out.reserve(in.size());
+            for (auto& byte : in)
             {
-                std::string byteString = hex.substr(i, 2);
-                bytes[i / 2] = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
+                out.push_back(static_cast<unsigned char>(std::stoi(byte, nullptr, 16)));
             }
+
+            return out;
         }
 
         std::string dump(const void* data, std::size_t length, std::size_t rowSize, bool showASCII)

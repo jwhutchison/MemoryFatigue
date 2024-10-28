@@ -43,15 +43,17 @@ namespace fatigue::pe {
             return;
         }
 
-        // Read section headers
-        logInfo(std::format("Reading {} section headers", m_coff.sectionCount));
+        // Get section headers in a single read
         m_sections.resize(m_coff.sectionCount);
         read(
             m_dos.coffHeaderOffset + sizeof(m_coff) + m_coff.optionalHeaderSize,
             m_sections.data(),
             sizeof(SectionHeader) * m_coff.sectionCount
         );
-        logInfo(hex::dump(m_sections.data(), sizeof(SectionHeader) * m_coff.sectionCount, 16));
+        if (m_sections.empty() || m_sections.size() != m_coff.sectionCount) {
+            logError(std::format("Invalid section headers for {} {}", pid, name));
+            return;
+        }
     }
 
     std::vector<Region> PeMap::getSections()
@@ -60,17 +62,18 @@ namespace fatigue::pe {
         for (auto &it : m_sections) {
             std::string name(it.name, sizeof(it.name));
             name = string::trim(name);
-            sections.push_back(Region(pid, it.virtualAddress, it.virtualAddress + it.virtualSize, name));
+            sections.push_back(Region(pid, start + it.virtualAddress, start + it.virtualAddress + it.virtualSize, name));
         }
         return sections;
     }
 
     Region PeMap::getSection(const std::string_view &name)
     {
-        for (auto &it : getSections()) {
+        for (auto &it : m_sections) {
+            std::string secName = string::trim(it.name);
             // if secion name starts with a ., match with or without the dot
-            if (name == it.name || (name[0] != '.' && name == it.name.substr(1)))
-                return it;
+            if (name == secName || (secName.starts_with(".") && name == secName.substr(1)))
+                return Region(pid, start + it.virtualAddress, start + it.virtualAddress + it.virtualSize, secName);
         }
         // Return an invalid region if not found
         return Region();

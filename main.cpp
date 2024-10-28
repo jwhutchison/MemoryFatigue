@@ -24,6 +24,20 @@ int main(int argc, char* args[])
 
     // testLog();
 
+    logInfo("Step 0: Silly Billy String Stuff");
+
+    std::string hex1 = "aabbccddeeff";
+    std::string hex2 = "aa bb cc ?? ee ff";
+
+    // search::Pattern pattern1 = search::parsePattern(hex1);
+    // logInfo(std::format("Pattern 1: {}", hex1));
+    // logInfo(std::format("Mask: {}, Data: \n{}", pattern1.mask, hex::dump(pattern1.bytes.data(), pattern1.bytes.size())));
+
+    search::Pattern pattern2 = search::parsePattern(hex2);
+    logInfo(std::format("Pattern 2: {}", hex2));
+    logInfo(std::format("Mask: {}, Data: \n{}", pattern2.mask, hex::dump(pattern2.bytes.data(), pattern2.bytes.size())));
+
+
     logInfo("Step 1: Find Sekiro.exe");
 
     std::string processName = "sekiro.exe";
@@ -49,67 +63,61 @@ int main(int argc, char* args[])
     logInfo(std::format("Status Name:  {}", statusName));
     logInfo(std::format("Cmdline:      {}", cmdline));
 
-    // KITTY_LOGI("Located PE:   %s", process->peScanner.isValid() ? "Yes" : "No");
-
-    // if (!process->peScanner.isValid()) {
-    //     KITTY_LOGE("Failed to locate PE headers");
-    //     return 1;
-    // }
 
     logInfo("Step 2: Get process map");
 
-    // std::vector<proc::Map> maps = proc::getMaps(pid);
-    // std::vector<proc::Map> maps = proc::getValidMaps(pid);
-    // std::vector<proc::Map> maps = proc::getMapsEndsWith(pid, ".exe");
-    // for (auto map : maps) {
-    //     logInfo(map.toString());
-    // }
-    // proc::Map map = maps.front();
-
     proc::Map map = proc::findMapEndsWith(pid, processName);
     // Map map = findMapEndsWith(pid, "dinput8.dll");
-
     logInfo(map.toString());
+
 
     logInfo("Step 3: Read memory");
     if (map.isValid()) {
-
-        pe::DosHeader lol = {0};
+        pe::DosHeader dos = {0};
         size_t bytesRead = 0;
 
-        // bytesRead = mem::sys::read(map.pid, map.start, &lol, sizeof(lol));
-        // bytesRead = mem::sys::read(map.pid, map.start, &lol);
-        // bytesRead = region.read(0, &lol, sizeof(lol));
-        bytesRead = map.read(0, &lol);
-        logInfo(std::format("Fatigue Read2 {} bytes at {:#x}", sizeof(lol), map.start));
-        std::cout << hex::dump(&lol, sizeof(pe::DosHeader), 16) << std::endl;
+        bytesRead = map.read(0, &dos);
+        logInfo(std::format("read {} bytes at {:#x}", sizeof(dos), map.start));
+        std::cout << hex::dump(&dos, sizeof(pe::DosHeader), 16) << std::endl;
     }
 
     logInfo("Step 4: Read PE headers");
     pe::PeMap peMap(map);
-    if (peMap.isValid()) {
 
-        logInfo(std::format("DOS Header: {:#x}", peMap.dos().magic));
-        logInfo(std::format("COFF Header: {:#x}", peMap.coff().signature));
-        logInfo(std::format("Optional Header: {:#x}", peMap.optional().magic));
-
-        for (auto section : peMap.getSections()) {
-            logInfo(std::format("Section: {}", section.name));
-        }
+    if (!peMap.isValid()) {
+        logError("Failed to read PE headers");
+        return 1;
     }
 
-    // std::string haystack = "ABCDEFGABCDABCDABC";
-    // std::string needle = "ABCDAB";
+    logInfo(std::format("DOS Header: {:#x}", peMap.dos().magic));
+    logInfo(std::format("COFF Header: {:#x}", peMap.coff().signature));
+    logInfo(std::format("Optional Header: {:#x}", peMap.optional().magic));
 
-    // std::vector<uintptr_t> found = search::search(haystack.c_str(), haystack.size(), needle.c_str(), needle.size(), "", false);
-
-    // for (auto f : found) {
-    //     logInfo(std::format("Found {} at offset {}", needle, f));
+    // for (auto section : peMap.getSections()) {
+    //     logInfo(std::format("Section: {}", section.name));
     // }
 
-    // KITTY_LOGI("Found map: %s", process->peScanner.getProcMap()->toString().c_str());
+    Region textSection = peMap.getSection(".text");
 
-    // pe::SectionScanner *textSection = process->getPeSection(".text");
+    if (!textSection.isValid()) {
+        logError("Failed to find .text section");
+        return 1;
+    }
+
+    logInfo(std::format("Found text section: {} ({:#x}-{:#x})", textSection.name, textSection.start, textSection.end));
+
+    unsigned char lol[0x100] = {0};
+    textSection.read(0, &lol);
+    std::cout << hex::dump(lol, sizeof(lol), 16) << std::endl;
+
+
+    logInfo("Step 5: Search for pattern");
+
+    logInfo("Searching for pattern: C7 43 ?? ?? ?? ?? ?? 4C 89 AB");
+    std::vector<uintptr_t> results = textSection.find("C7 43 ?? ?? ?? ?? ?? 4C 89 AB");
+    for (auto result : results) {
+        logInfo(std::format("Found at {:#x}", result));
+    }
 
     // if(textSection && textSection->isValid()) {
     //     KITTY_LOGI("Found text section: \"%s\"",
