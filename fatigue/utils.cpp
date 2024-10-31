@@ -35,8 +35,6 @@ namespace fatigue {
                                       const void* needle, size_t needleSize,
                                       std::string_view mask, bool first)
         {
-            logDebug(std::format("search::search {} {} {}", haystackSize, needleSize, mask));
-
             std::vector<uintptr_t> found = {};
 
             if (!mask.empty() && mask.at(0) == '?')
