@@ -3,6 +3,8 @@
 #include "fatigue.hpp"
 
 #include <errno.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
 
 using namespace fatigue;
 
@@ -21,6 +23,9 @@ int main(int argc, char* args[])
     // log::setLogFormat(log::LogFormat::Compact);
     log::setLogFormat(log::LogFormat::Tiny);
     log::setLogLevel(log::LogLevel::Debug);
+
+    // IO access method is required for writing memory
+    // mem::setAccessMethod(mem::AccessMethod::IO);
 
     // testLog();
 
@@ -51,6 +56,11 @@ int main(int argc, char* args[])
     logInfo(std::format("Process ID:   {}", pid));
     logInfo(std::format("Status Name:  {}", statusName));
     logInfo(std::format("Cmdline:      {}", cmdline));
+
+
+    logInfo("Step 1.5: Attach to process");
+
+    proc::attach(pid);
 
 
     logInfo("Step 2: Get process map");
@@ -98,6 +108,7 @@ int main(int argc, char* args[])
     logInfo("Step 4: Get .text section and search for pattern");
 
     Region textSection = peMap.getSection(".text");
+    textSection.method = mem::AccessMethod::IO;
 
     if (!textSection.isValid()) {
         logError("Failed to find .text section");
@@ -135,13 +146,8 @@ int main(int argc, char* args[])
         int offset = 6;
         unsigned char patch = 0x00;
 
-        errno = 0;
         bytesWritten = textSection.write(found + offset, &patch, 1);
         logInfo(std::format("Wrote {} bytes to {:#x} + {}", bytesWritten, found, offset));
-
-        if (bytesWritten <= 0) {
-            logError(std::format("Failed to write to {:#x}: {}", found + offset, errno));
-        }
 
         // After patch
         bytesRead = textSection.read(found, buffer, sizeof(buffer));
@@ -150,13 +156,8 @@ int main(int argc, char* args[])
 
         // Restore the original byte
         patch = 0x01;
-        errno = 0;
         bytesWritten = textSection.write(found + offset, &patch, 1);
         logInfo(std::format("Restored {} bytes to {:#x} + {}", bytesWritten, found, offset));
-
-        if (bytesWritten <= 0) {
-            logError(std::format("Failed to write to {:#x}: {}", found + offset, errno));
-        }
 
         // After restore
         bytesRead = textSection.read(found, buffer, sizeof(buffer));
@@ -166,6 +167,10 @@ int main(int argc, char* args[])
     } else {
         logError("Pattern not found");
     }
+
+    logInfo("Step 6: Detach from process");
+
+    proc::detach(pid);
 
     return 0;
 }

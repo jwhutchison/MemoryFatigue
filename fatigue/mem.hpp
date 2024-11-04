@@ -11,11 +11,16 @@ namespace fatigue::mem {
     /** Memory access method, used by Region to choose between syscalls and file IO */
     enum class AccessMethod {
         SYS,
-        IO
+        IO,
+        PTRACE
     };
+
+    void setAccessMethod(AccessMethod method);
+    AccessMethod getAccessMethod();
 
     /**
      * Read and write process memory using syscalls
+     * Fast, but will not work to patch memory of another process (see io::write or trace::write)
      */
     namespace sys {
         /** Read process memory using process_vm_readv */
@@ -39,66 +44,52 @@ namespace fatigue::mem {
 
     /**
      * Read and write process memory using /proc/[pid]/mem file IO
+     * Important, if you intend to write to memory of another process, you will need to attach first,
+     * use io::write or trace::write (sys::write will not work!), and then detach.
      */
     namespace io {
-        /** Attach to a process using ptrace and wait */
-        void attach(pid_t pid);
-        /** Detach from a process using ptrace */
-        void detach(pid_t pid);
-        /** Read process memory from /proc/[pid]/mem, optionally using ptrace attach */
-        ssize_t read(pid_t pid, uintptr_t address, void* buffer, size_t size, bool usePtrace = false);
-        /** Write process memory from /proc/[pid]/mem, optionally using ptrace attach */
-        ssize_t write(pid_t pid, uintptr_t address, const void* buffer, size_t size, bool usePtrace = false);
+        /** Read process memory from /proc/[pid]/mem */
+        ssize_t read(pid_t pid, uintptr_t address, void* buffer, size_t size);
+        /** Write process memory from /proc/[pid]/mem */
+        ssize_t write(pid_t pid, uintptr_t address, const void* buffer, size_t size);
 
         /** Read process memory from /proc/[pid]/mem into known type */
         template <typename T>
-        ssize_t read(pid_t pid, uintptr_t address, T* value, bool usePtrace = false)
+        ssize_t read(pid_t pid, uintptr_t address, T* value)
         {
-            return read(pid, address, value, sizeof(T), usePtrace);
+            return read(pid, address, value, sizeof(T));
         }
         /** Write process memory from /proc/[pid]/mem from known type */
         template <typename T>
-        ssize_t write(pid_t pid, uintptr_t address, const T* value, bool usePtrace = false)
+        ssize_t write(pid_t pid, uintptr_t address, const T* value)
         {
-            return write(pid, address, value, sizeof(T), usePtrace);
+            return write(pid, address, value, sizeof(T));
         }
-
-        /**
-         * Batch read and write process memory using /proc/[pid]/mem file IO
-         * Optionally attach and detach using ptrace
-         * Uses a single file descriptor for multiple reads and writes
-         */
-        class Batch {
-        protected:
-            pid_t m_pid{0};
-            bool m_usePtrace{false};
-            bool m_attached{false};
-            int m_fd{-1};
-        public:
-            Batch() = default;
-            ~Batch() { stop(); }
-
-            inline pid_t pid() const { return m_pid; }
-            inline bool usePtrace() const { return m_usePtrace; }
-            inline bool attached() const { return m_attached; }
-            inline int fd() const { return m_fd; }
-
-            int start(pid_t pid, bool usePtrace = false);
-            void stop();
-
-            ssize_t read(uintptr_t address, void* buffer, size_t size);
-            ssize_t write(uintptr_t address, const void* buffer, size_t size);
-
-            template <typename T>
-            ssize_t read(uintptr_t offset, T* value) const
-            {
-                return read(offset, value, sizeof(T));
-            }
-            template <typename T>
-            ssize_t write(uintptr_t offset, const T* value) const
-            {
-                return write(offset, value, sizeof(T));
-            }
-        };
     } // namespace io
+
+    /**
+     * Read and write process memory using ptrace
+     * Slow, but should work everywhere PTRACE is available
+     * Important, if you intend to write to memory of another process, you will need to attach first,
+     * use io::write or trace::write (sys::write will not work!), and then detach.
+     */
+    namespace trace {
+        /** Read process memory using ptrace */
+        size_t read(pid_t pid, uintptr_t address, void* buffer, size_t size);
+        /** Write process memory using ptrace */
+        size_t write(pid_t pid, uintptr_t address, const void* buffer, size_t size);
+
+        /** Read process memory using ptrace into known type */
+        template <typename T>
+        size_t read(pid_t pid, uintptr_t address, T* value)
+        {
+            return read(pid, address, value, sizeof(T));
+        }
+        /** Write process memory using ptrace from known type */
+        template <typename T>
+        size_t write(pid_t pid, uintptr_t address, const T* value)
+        {
+            return write(pid, address, value, sizeof(T));
+        }
+    } // namespace ptrace
 }

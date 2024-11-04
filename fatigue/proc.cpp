@@ -1,6 +1,8 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
 #include <thread>
 #include "fatigue.hpp"
 #include "log.hpp"
@@ -224,4 +226,39 @@ namespace fatigue::proc {
         if (maps.empty()) return Map{};
         return maps.front();
     }
+
+    // Attach and detach
+
+    bool attach(pid_t pid)
+    {
+        if (pid <= 0) return -1;
+
+        // attach to the process, this will initiate a stop
+        if(ptrace(PTRACE_ATTACH, pid, 0, 0) != 0) {
+            logError(std::format("Failed to attach to process {}", pid));
+            return false;
+        }
+
+        // wait for the process to stop
+        int status = 0;
+        do {
+            waitpid(pid, &status, 0);
+
+            if (WIFEXITED(status) || WIFSIGNALED(status)) {
+                logError(std::format("Process {} exited while waiting for stop", pid));
+                return false;
+            }
+        } while (!WIFSTOPPED(status));
+
+        return true;
+    }
+
+    bool detach(pid_t pid)
+    {
+        if (pid <= 0) return -1;
+
+        // detach from the process, this will resume the process
+        return ptrace(PTRACE_DETACH, pid, 0, 0) == 0;
+    }
+
 } // namespace fatigue

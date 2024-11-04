@@ -127,4 +127,15 @@ namespace fatigue::proc {
      * Find the first map in /proc/[pid]/maps that has a pathname that ends with the provided name
      */
     Map findMapEndsWith(pid_t pid, const std::string& name);
+
+    /**
+     * Attach to a process using ptrace, allowing read and write access to memory
+     * Should detach from the process when done, or it will be left suspended
+     * You will need to be the owner of the process or have the CAP_SYS_PTRACE capability.
+     */
+    bool attach(pid_t pid);
+    /**
+     * Detach from a process using ptrace
+     */
+    bool detach(pid_t pid);
 } // namespace fatigue

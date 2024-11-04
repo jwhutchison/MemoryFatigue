@@ -20,18 +20,18 @@ namespace fatigue {
      */
     class Region {
     public:
-        AccessMethod method{AccessMethod::SYS};
+        AccessMethod method;
 
         std::string name;
         pid_t pid{0};
         unsigned long long start{0};
         unsigned long long end{0};
 
-        Region() = default;
+        Region() : method(getAccessMethod()) {};
         Region(pid_t pid, uintptr_t start, uintptr_t end)
-            : pid(pid), start(start), end(end) {}
+            : method(getAccessMethod()), pid(pid), start(start), end(end) {}
         Region(pid_t pid, uintptr_t start, uintptr_t end, const std::string& name)
-            : pid(pid), start(start), end(end), name(name) {}
+            : method(getAccessMethod()), pid(pid), start(start), end(end), name(name) {}
         ~Region() = default;
 
         inline size_t size() const { return end - start; }

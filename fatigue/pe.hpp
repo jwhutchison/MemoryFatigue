@@ -50,14 +50,16 @@ namespace fatigue::pe {
 
     class PeMap : public proc::Map {
     protected:
-        DosHeader m_dos;
-        CoffHeader m_coff;
-        CoffOptionalHeader m_optional;
-        std::vector<SectionHeader> m_sections;
+        DosHeader m_dos{0};
+        CoffHeader m_coff{0};
+        CoffOptionalHeader m_optional{0};
+        std::vector<SectionHeader> m_sections{};
     public:
         PeMap() = default;
-        PeMap(proc::Map& map) : proc::Map(map) {
-            init();
+        PeMap(proc::Map& map, bool autoInit = true) : proc::Map(map) {
+            // Deferring init allows you to change memory access method before any reads happen
+            // However, sys should work fine for reading PE headers
+            if (autoInit) init();
         }
         ~PeMap() = default;
 
