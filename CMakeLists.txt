@@ -27,3 +27,17 @@ add_executable(
     main.cpp
     ${FATIGUE_SRC}
 )
+
+# add_executable(
+#     demo
+#     demo.cpp
+#     ${FATIGUE_SRC}
+# )
+
+# Game-specific patchers
+
+add_executable(
+    sekiropatcher
+    patchers/sekiro/main.cpp
+    ${FATIGUE_SRC}
+)

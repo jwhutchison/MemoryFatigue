@@ -153,6 +153,11 @@ namespace fatigue::proc {
         return pid;
     }
 
+    void wait(u_int ms)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+    }
+
     // Maps
 
     std::vector<Map> getMaps(pid_t pid, std::function<bool(Map&)> filter)

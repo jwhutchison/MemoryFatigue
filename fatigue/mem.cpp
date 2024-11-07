@@ -87,7 +87,7 @@ namespace fatigue::mem {
                     return bytesRead;
                 }
 
-                memcpy(static_cast<unsigned char*>(buffer) + bytesRead, &data, sizeof(data));
+                memcpy(static_cast<uint8_t*>(buffer) + bytesRead, &data, sizeof(data));
                 bytesRead += sizeof(data);
             }
 
@@ -103,7 +103,7 @@ namespace fatigue::mem {
             while (bytesWritten < size)
             {
                 long data = 0;
-                memcpy(&data, static_cast<const unsigned char*>(buffer) + bytesWritten, sizeof(data));
+                memcpy(&data, static_cast<const uint8_t*>(buffer) + bytesWritten, sizeof(data));
 
                 errno = 0;
                 ptrace(PTRACE_POKEDATA, pid, address + bytesWritten, data);

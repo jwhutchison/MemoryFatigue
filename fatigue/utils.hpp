@@ -33,7 +33,7 @@ namespace fatigue {
 
     namespace search {
         struct Pattern {
-            std::vector<unsigned char> bytes;
+            std::vector<uint8_t> bytes;
             std::string mask;
         };
 
@@ -120,7 +120,7 @@ namespace fatigue {
         std::string toHex(const T &data) { return toHex(data, sizeof(T)); }
 
         /** Convert a hexadecimal string to a chunk of data */
-        std::vector<unsigned char> parse(std::string_view hex);
+        std::vector<uint8_t> parse(std::string_view hex);
 
         /** Print HEX string from data; formatted uppercase with spaces between each byte pair */
         inline std::string toPrettyHex(const void* data, const std::size_t length) { return prettify(toHex(data, length)); }

@@ -101,6 +101,12 @@ namespace fatigue::proc {
     pid_t waitForProcess(std::function<pid_t()> get, u_int timeout = 0, u_int interval = 1);
 
     /**
+     * Sleep for a number of milliseconds
+     * Useful if the process needs a moment to start up
+     */
+    void wait(u_int ms = 1000);
+
+    /**
      * Get all maps in /proc/[pid]/maps
      * Optionally, provide a custom comparator to filter maps, e.g. by pathname
      */

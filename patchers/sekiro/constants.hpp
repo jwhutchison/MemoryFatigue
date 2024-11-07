@@ -1,4 +1,4 @@
-// Shamelessly copied from https://github.com/uberhalit/SekiroFpsUnlockAndMore
+// Shamelessly borrowed from https://github.com/uberhalit/SekiroFpsUnlockAndMore
 // Credits to 'uberhalit' for the original code (MIT License)
 #pragma once
 
@@ -29,7 +29,6 @@ namespace sekiro
     const int PATTERN_FRAMELOCK_OFFSET = -1; // offset to byte array from found position
     const std::string PATTERN_FRAMELOCK_FUZZY = "C7 43 ?? ?? ?? ?? ?? 4C 89 AB";
     const int PATTERN_FRAMELOCK_FUZZY_OFFSET = 3;
-
 
     /**
         Reference pointer pFrametimeRunningSpeed to speed table entry that gets used in calculations.
@@ -94,7 +93,7 @@ namespace sekiro
      * @param frameLimit The set frame rate limit.
      * @return The value of the closest speed fix.
      */
-    float findSpeedFixForRefreshRate(int frameLimit)
+    inline float findSpeedFixForRefreshRate(int frameLimit)
     {
         float idealSpeedFix = frameLimit / 2.0;
         float closestSpeedFix = PATCH_FRAMELOCK_SPEED_FIX_DEFAULT_VALUE;
@@ -105,6 +104,12 @@ namespace sekiro
         return closestSpeedFix;
     }
 
+
+    // Resolution struct to allow single write operation
+    struct Resolution {
+        int width;
+        int height;
+    };
 
     /**
         Reference pointer pCurrentResolutionWidth to <int>iInternalGameWidth (and <int>iInternalGameHeight which is +4 bytes).
@@ -128,7 +133,6 @@ namespace sekiro
     const std::string PATCH_RESOLUTION_DEFAULT_DISABLE = "80 07 00 00 38 04 00 00";
     const std::string PATTERN_RESOLUTION_DEFAULT_720 = "00 05 00 00 D0 02 00 00 A0 05 00 00 2A 03 00 00"; // 1280x720
     const std::string PATCH_RESOLUTION_DEFAULT_DISABLE_720 = "00 05 00 00 D0 02 00 00";
-
 
     /**
         Conditional jump instruction that determines if 16/9 scaling for game is enforced or not, overwrite with non conditional JMP so widescreen won't get clinched.

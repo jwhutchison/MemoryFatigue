@@ -40,8 +40,22 @@ namespace fatigue {
 
         // Read and write
 
-        ssize_t read(uintptr_t offset, void* buffer, size_t size) const;
-        ssize_t write(uintptr_t offset, const void* buffer, size_t size) const;
+        /**
+         * @brief Read memory from the region
+         * @param offset Offset from the start of the region
+         * @param buffer Buffer to read into
+         * @param size Number of bytes to read
+         * @param force Force read even if it would be out of bounds (does not allow 0 length or null buffer)
+         */
+        ssize_t read(uintptr_t offset, void* buffer, size_t size, bool force = false) const;
+        /**
+         * @brief Write memory to the region
+         * @param offset Offset from the start of the region
+         * @param buffer Buffer to write from
+         * @param size Number of bytes to write
+         * @param force Force write even if it would be out of bounds (does not allow 0 length or null buffer)
+         */
+        ssize_t write(uintptr_t offset, const void* buffer, size_t size, bool force = false) const;
 
         template <typename T>
         ssize_t read(uintptr_t offset, T* value) const

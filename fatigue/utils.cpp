@@ -22,7 +22,7 @@ namespace fatigue {
                     out.bytes.push_back(0);
                     out.mask += "?";
                 } else {
-                    out.bytes.push_back(static_cast<unsigned char>(std::stoi(byte, nullptr, 16)));
+                    out.bytes.push_back(static_cast<uint8_t>(std::stoi(byte, nullptr, 16)));
                     out.mask += ".";
                 }
             }
@@ -43,8 +43,8 @@ namespace fatigue {
             if (!haystack || !needle || haystackSize < 1 || needleSize < 1)
                 return found;
 
-            const unsigned char* h = static_cast<const unsigned char*>(haystack);
-            const unsigned char* n = static_cast<const unsigned char*>(needle);
+            const uint8_t* h = static_cast<const uint8_t*>(haystack);
+            const uint8_t* n = static_cast<const uint8_t*>(needle);
 
             for (uintptr_t i = 0; i < haystackSize; /* increment in loop */)
             {
@@ -118,10 +118,10 @@ namespace fatigue {
         {
             std::string out = std::string(str);
 
-            out.erase(out.begin(), std::find_if(out.begin(), out.end(), [](unsigned char ch) {
+            out.erase(out.begin(), std::find_if(out.begin(), out.end(), [](char ch) {
                 return std::isprint(ch) && !std::isspace(ch);
             }));
-            out.erase(std::find_if(out.rbegin(), out.rend(), [](unsigned char ch) {
+            out.erase(std::find_if(out.rbegin(), out.rend(), [](char ch) {
                 return std::isprint(ch) && !std::isspace(ch);
             }).base(), out.end());
 
@@ -205,7 +205,7 @@ namespace fatigue {
             if (!data || length == 0)
                 return "";
 
-            const unsigned char* bytes = static_cast<unsigned char const*>(data);
+            const uint8_t* bytes = static_cast<uint8_t const*>(data);
 
             std::string out;
             out.reserve(length);
@@ -223,7 +223,7 @@ namespace fatigue {
             if (!data || length == 0)
                 return "";
 
-            const unsigned char* bytes = static_cast<unsigned char const*>(data);
+            const uint8_t* bytes = static_cast<uint8_t const*>(data);
             const char* hexmap = "0123456789ABCDEF";
 
             std::string hex;
@@ -235,7 +235,7 @@ namespace fatigue {
             return hex;
         }
 
-        std::vector<unsigned char> parse(std::string_view hex)
+        std::vector<uint8_t> parse(std::string_view hex)
         {
             // Must be actual hex, no wildcards
             if (!isValid(hex, true))
@@ -244,11 +244,11 @@ namespace fatigue {
             // Convert each byte pair to a byte data
             std::vector<std::string> in = split(hex);
 
-            std::vector<unsigned char> out;
+            std::vector<uint8_t> out;
             out.reserve(in.size());
             for (auto& byte : in)
             {
-                out.push_back(static_cast<unsigned char>(std::stoi(byte, nullptr, 16)));
+                out.push_back(static_cast<uint8_t>(std::stoi(byte, nullptr, 16)));
             }
 
             return out;
@@ -259,7 +259,7 @@ namespace fatigue {
             if (!data || length == 0 || rowSize == 0)
                 return "";
 
-            const unsigned char *bytes = static_cast<const unsigned char *>(data);
+            const uint8_t *bytes = static_cast<const uint8_t *>(data);
 
             std::string out;
 
