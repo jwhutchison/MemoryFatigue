@@ -9,10 +9,13 @@
 using namespace fatigue::mem;
 
 namespace fatigue {
-    ssize_t Region::read(uintptr_t offset, void* buffer, size_t size, bool force) const
+    ssize_t Region::read(ssize_t offset, void* buffer, size_t size) const
     {
         if (!isValid() || !buffer || size == 0) return -1;
-        if (!force && start + offset + size > end) throw std::out_of_range("Attempted read past end of region");
+        if (enforceBounds) {
+            if (offset < 0) throw std::out_of_range("Attempted read before start of region");
+            if (start + offset + size > end) throw std::out_of_range("Attempted read past end of region");
+        }
 
         ssize_t bytesRead = 0;
         errno = 0;
@@ -35,10 +38,13 @@ namespace fatigue {
         return bytesRead;
     }
 
-    ssize_t Region::write(uintptr_t offset, const void* buffer, size_t size, bool force) const
+    ssize_t Region::write(ssize_t offset, const void* buffer, size_t size) const
     {
         if (!isValid() || !buffer || size == 0) return -1;
-        if (!force && start + offset + size > end) throw std::out_of_range("Attempted write past end of region");
+        if (enforceBounds) {
+            if (offset < 0) throw std::out_of_range("Attempted write before start of region");
+            if (start + offset + size > end) throw std::out_of_range("Attempted write past end of region");
+        }
 
         ssize_t bytesWritten = 0;
         errno = 0;
@@ -66,7 +72,7 @@ namespace fatigue {
         if (!isValid() || !pattern || patternSize == 0) return {};
 
         // Copy the memory region into a buffer
-        // TODO: Consider caching this, or maybe split the search into chunks
+        // TODO: Save this in the object for multiple searches, allow refresh
         std::vector<uint8_t> buffer;
         buffer.reserve(size());
         read(0, buffer.data(), size());
@@ -80,7 +86,6 @@ namespace fatigue {
         if (!isValid() || pattern.empty()) return {};
 
         // Copy the memory region into a buffer
-        // TODO: Consider caching this, or maybe split the search into chunks
         std::vector<uint8_t> buffer;
         buffer.reserve(size());
         read(0, buffer.data(), size());
