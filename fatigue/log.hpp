@@ -2,10 +2,10 @@
 
 #include <chrono>
 #include <filesystem>
+#include <format>
 #include <iostream>
 #include <map>
 #include <source_location>
-#include <string>
 #include "utils.hpp"
 
 using namespace fatigue::color;
@@ -43,8 +43,8 @@ namespace fatigue::log {
     const std::map<LogLevel, const std::string> logLevelNames = {
         {LogLevel::Error, "💥 ERROR"},
         {LogLevel::Warning, "🚩 WARNING"},
-        {LogLevel::Fail, "➖ FAIL"},
-        {LogLevel::Success, "➕ SUCCESS"},
+        {LogLevel::Fail, "❌ FAIL"},
+        {LogLevel::Success, "✔️ SUCCESS"},
         {LogLevel::Info, "💬 INFO"},
         {LogLevel::Debug, "🔨 DEBUG"},
     };

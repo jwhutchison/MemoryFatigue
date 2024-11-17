@@ -1,9 +1,4 @@
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
 #include "utils.hpp"
-
-#include "log.hpp"
 
 namespace fatigue {
     namespace search {
@@ -254,7 +249,7 @@ namespace fatigue {
             return out;
         }
 
-        std::string dump(const void* data, std::size_t length, std::size_t rowSize, bool showASCII)
+        std::string dump(const void* data, std::size_t length, unsigned long long startAddress, std::size_t rowSize, bool showASCII)
         {
             if (!data || length == 0 || rowSize == 0)
                 return "";
@@ -266,9 +261,9 @@ namespace fatigue {
             for (size_t i = 0; i < length; i += rowSize)
             {
                 out += std::format(
-                    "{:#08x}: {:{}s} {:s}\n",
+                    "{:#08x}: {:{}s} {}\n",
                     // offset
-                    i,
+                    i + startAddress,
                     // hex
                     toPrettyHex(&bytes[i], std::min(rowSize, length - i)),
                     // hex padding (sets width of field)

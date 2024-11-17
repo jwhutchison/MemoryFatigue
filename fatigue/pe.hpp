@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cstdint>
-#include "Region.hpp"
+#include "log.hpp"
 #include "proc.hpp"
+#include "Region.hpp"
 
 /**
  * @brief Portable Executable (PE) format for Windows executables, DLLs, etc

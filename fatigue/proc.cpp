@@ -75,7 +75,7 @@ namespace fatigue::proc {
 
         try {
             std::string buffer;
-            file >> buffer;
+            std::getline(file, buffer);
             return string::trim(buffer);
         } catch (const std::exception& e) {
             logError(std::format("Error reading {}: {}", path.c_str(), e.what()));
@@ -131,6 +131,12 @@ namespace fatigue::proc {
     pid_t getProcessIdByCmdlineContains(const std::string& processName)
     {
         return getProcessID(processName, [&](const int checkPid) {
+            std::string cmdline = getCmdline(checkPid);
+            if (cmdline.contains("Crab")) {
+                logInfo(std::format("Checking {} for {}\n{}\n",
+                                    checkPid, processName,
+                                    cmdline, cmdline.contains(processName) ? "true" : "false"));
+            }
             return getCmdline(checkPid).contains(processName);
         });
     }

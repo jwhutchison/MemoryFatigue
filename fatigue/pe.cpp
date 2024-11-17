@@ -1,6 +1,4 @@
-#include "log.hpp"
 #include "pe.hpp"
-#include "Region.hpp"
 
 using namespace fatigue::mem::sys;
 

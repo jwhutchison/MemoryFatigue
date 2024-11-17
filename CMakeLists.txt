@@ -28,11 +28,11 @@ add_executable(
     ${FATIGUE_SRC}
 )
 
-# add_executable(
-#     demo
-#     demo.cpp
-#     ${FATIGUE_SRC}
-# )
+add_executable(
+    demo
+    demo.cpp
+    ${FATIGUE_SRC}
+)
 
 # Game-specific patchers
 

@@ -1,6 +1,7 @@
 #include <format>
 #include <string>
 #include "fatigue.hpp"
+#include "Patch.hpp"
 
 using namespace fatigue;
 
@@ -26,7 +27,7 @@ int main(int argc, char* args[])
 
     // testLog();
 
-    logInfo("Step 1: Find Sekiro.exe");
+    logInfo("Step 1: Find EXE");
 
     std::string processName = "sekiro.exe";
 
@@ -66,15 +67,15 @@ int main(int argc, char* args[])
     // Map map = findMapEndsWith(pid, "dinput8.dll");
 
     // Once we have the map, we can read from it directly
-    // logInfo("Step 2.5: Demo a memory read");
-    // if (map.isValid()) {
-    //     pe::DosHeader dos = {0};
-    //     size_t bytesRead = 0;
+    logInfo("Step 2.5: Demo a memory read");
+    if (map.isValid()) {
+        pe::DosHeader dos = {0};
+        size_t bytesRead = 0;
 
-    //     bytesRead = map.read(0, &dos);
-    //     logInfo(std::format("read {} bytes at {:#x}", sizeof(dos), map.start));
-    //     std::cout << hex::dump(&dos, sizeof(pe::DosHeader), 16) << std::endl;
-    // }
+        bytesRead = map.read(0, &dos);
+        logInfo(std::format("read {} bytes at {:#x}", sizeof(dos), map.start));
+        std::cout << hex::dump(&dos, sizeof(pe::DosHeader), map.start) << std::endl;
+    }
 
 
     logInfo("Step 3: Read PE headers");
@@ -109,11 +110,11 @@ int main(int argc, char* args[])
     logInfo(std::format("Found text section: {} ({:#x}-{:#x})", textSection.name, textSection.start, textSection.end));
 
     // Search for a pattern in the .text section using a string
-    logInfo("Searching for pattern: C7 43 ?? ?? ?? ?? ?? 4C 89 AB");
-    std::vector<uintptr_t> results = textSection.find("C7 43 ?? ?? ?? ?? ?? 4C 89 AB");
-    for (auto result : results) {
-        logInfo(std::format("Found at {:#x}", result));
-    }
+    // logInfo("Searching for pattern: C7 43 ?? ?? ?? ?? ?? 4C 89 AB");
+    // std::vector<uintptr_t> results = textSection.find("C7 43 ?? ?? ?? ?? ?? 4C 89 AB");
+    // for (auto result : results) {
+    //     logInfo(std::format("Found at {:#x}", result));
+    // }
 
 
     logInfo("Step 5: Attach to process");
@@ -126,47 +127,92 @@ int main(int argc, char* args[])
 
     logInfo("Step 6: Apply a patch");
 
+    Patch patch(textSection, "C6 86 ?? ?? 00 00 ?? F3 0F 10 8E ?? ?? 00 00", 6, "01");
 
-    logInfo("Searching for pattern: C6 86 ?? ?? 00 00 ?? F3 0F 10 8E ?? ?? 00 00");
-    uintptr_t found = textSection.findFirst("C6 86 ?? ?? 00 00 ?? F3 0F 10 8E ?? ?? 00 00");
-
-    if (found) {
-        logInfo(std::format("Found at {:#x}", found));
-
-        unsigned char buffer[16] = {0};
-        ssize_t bytesRead = 0;
-        ssize_t bytesWritten = 0;
-
-        // before patch
-        bytesRead = textSection.read(found, buffer, sizeof(buffer));
-        logInfo("Original bytes:");
-        std::cout << hex::dump(buffer, bytesRead) << std::endl;
-
-        // Patch the byte at the found address
-        int offset = 6;
-        unsigned char patch = 0x00;
-
-        bytesWritten = textSection.write(found + offset, &patch, 1);
-        logInfo(std::format("Wrote {} bytes to {:#x} + {}", bytesWritten, found, offset));
-
-        // After patch
-        bytesRead = textSection.read(found, buffer, sizeof(buffer));
-        logInfo("After patch:");
-        std::cout << hex::dump(buffer, bytesRead) << std::endl;
-
-        // Restore the original byte
-        patch = 0x01;
-        bytesWritten = textSection.write(found + offset, &patch, 1);
-        logInfo(std::format("Restored {} bytes to {:#x} + {}", bytesWritten, found, offset));
-
-        // After restore
-        bytesRead = textSection.read(found, buffer, sizeof(buffer));
-        logInfo("After restore:");
-        std::cout << hex::dump(buffer, bytesRead) << std::endl;
-
-    } else {
-        logError("Pattern not found");
+    if (!patch.isValid()) {
+        logError("Patch is invalid");
+        return 1;
     }
+
+    logInfo(patch.dump());
+
+    // Apply the patch
+    if (patch.apply()) {
+        logInfo("Patch applied");
+    } else {
+        logError("Failed to apply patch");
+    }
+
+    logInfo(patch.dump("patch"));
+
+    // Restore the patch
+    if (patch.restore()) {
+        logInfo("Patch restored");
+    } else {
+        logError("Failed to restore patch");
+    }
+
+    logInfo(patch.dump("patch"));
+
+    // Do a not-found patch
+    Patch badPatch(textSection, "FF 01 ?? ?? 04 04 06 07 08 09 10", 2, "01");
+
+    if (!badPatch.isValid()) {
+        logError("Bad patch is invalid (expected error)");
+    }
+
+    logInfo(badPatch.dump());
+
+    // Do a multi-found patch
+    Patch multiPatch(textSection, "00 00 ?? 00 00", 2, "01");
+
+    if (!multiPatch.isValid()) {
+        logError("Multi patch is invalid");
+    }
+
+    logInfo(multiPatch.dump());
+
+
+    // logInfo("Searching for pattern: C6 86 ?? ?? 00 00 ?? F3 0F 10 8E ?? ?? 00 00");
+    // uintptr_t found = textSection.findFirst("C6 86 ?? ?? 00 00 ?? F3 0F 10 8E ?? ?? 00 00");
+
+    // if (found) {
+    //     logInfo(std::format("Found at {:#x}", found));
+
+    //     unsigned char buffer[16] = {0};
+    //     ssize_t bytesRead = 0;
+    //     ssize_t bytesWritten = 0;
+
+    //     // before patch
+    //     bytesRead = textSection.read(found, buffer, sizeof(buffer));
+    //     logInfo("Original bytes:");
+    //     std::cout << hex::dump(buffer, bytesRead) << std::endl;
+
+    //     // Patch the byte at the found address
+    //     int offset = 6;
+    //     unsigned char patch = 0x00;
+
+    //     bytesWritten = textSection.write(found + offset, &patch, 1);
+    //     logInfo(std::format("Wrote {} bytes to {:#x} + {}", bytesWritten, found, offset));
+
+    //     // After patch
+    //     bytesRead = textSection.read(found, buffer, sizeof(buffer));
+    //     logInfo("After patch:");
+    //     std::cout << hex::dump(buffer, bytesRead) << std::endl;
+
+    //     // Restore the original byte
+    //     patch = 0x01;
+    //     bytesWritten = textSection.write(found + offset, &patch, 1);
+    //     logInfo(std::format("Restored {} bytes to {:#x} + {}", bytesWritten, found, offset));
+
+    //     // After restore
+    //     bytesRead = textSection.read(found, buffer, sizeof(buffer));
+    //     logInfo("After restore:");
+    //     std::cout << hex::dump(buffer, bytesRead) << std::endl;
+
+    // } else {
+    //     logError("Pattern not found");
+    // }
 
     logInfo("Step 7: Detach from process");
 

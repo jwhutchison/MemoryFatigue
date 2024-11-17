@@ -4,8 +4,11 @@
 #define NO_COLOR false
 #endif
 
+#include <algorithm>
+#include <format>
+#include <iomanip>
 #include <iostream>
-#include <string>
+#include <sstream>
 #include <vector>
 
 namespace fatigue {
@@ -129,6 +132,6 @@ namespace fatigue {
         std::string toPrettyHex(const T &data) { return toPrettyHex(&data, sizeof(T)); }
 
         /** Print HEX dump from data; formatted with ASCII representation */
-        std::string dump(const void* data, std::size_t length, std::size_t rowSize = 16, bool showASCII = true);
+        std::string dump(const void* data, std::size_t length, unsigned long long startAddress = 0, std::size_t rowSize = 16, bool showASCII = true);
     } // namespace hex
 } // namespace fatigue

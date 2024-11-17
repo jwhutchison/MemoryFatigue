@@ -1,8 +1,13 @@
 #pragma once
 
-#include <string>
+#include <cstring>
+#include <errno.h>
+#include <format>
+#include <stdexcept>
 #include <vector>
+#include "log.hpp"
 #include "mem.hpp"
+#include "utils.hpp"
 
 #ifndef DEFAULT_MEMORY_ACCESS_METHOD
 #define DEFAULT_MEMORY_ACCESS_METHOD fatigue::mem::AccessMethod::SYS
@@ -55,9 +60,9 @@ namespace fatigue {
         /** Check if an address is within the region */
         inline bool contains(uintptr_t address) const { return address >= start && address < end; }
 
-        inline std::string toString()
+        inline std::string toString() const
         {
-            return std::format("{:#x}-{:#x} {}", start, end, name.c_str());
+            return std::format("{} {:#x}-{:#x} (pid {})", name.c_str(), start, end, pid);
         }
 
         // Read and write

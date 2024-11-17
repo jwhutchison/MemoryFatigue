@@ -1,5 +1,4 @@
 #include "log.hpp"
-#include "utils.hpp"
 
 namespace fatigue::log {
     // Global options
