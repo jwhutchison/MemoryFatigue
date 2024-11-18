@@ -4,6 +4,7 @@
 #include <format>
 #include <functional>
 #include <iostream>
+#include <map>
 #include <vector>
 #include "log.hpp"
 #include "Region.hpp"
@@ -12,6 +13,10 @@
 namespace fatigue {
     class Patch {
     protected:
+        /** Character width of the first colomn in dump outputs */
+        static const size_t labelWidth = sizeof(uintptr_t) + 2; // "0x123456: ", "Pattern:  "
+        static const size_t defaultShowMatches = 5;
+
         Region m_region{};
 
         uintptr_t m_address{0};
@@ -29,6 +34,7 @@ namespace fatigue {
 
         /** Not used internally, but can be used to debug multiple matches */
         std::vector<uintptr_t> m_matches{};
+        std::string dumpPatternAt(long address, Color highlight = Color::Reset) const;
 
     public:
         Patch() = default;
@@ -127,11 +133,19 @@ namespace fatigue {
         std::string toString() const;
 
         /**
-         * @brief Create a really pretty representation of the entire patch
+         * @brief Create a pretty representation of the entire patch
          * Useful for debugging and logging
-         * @param what Optional string to filter what to dump
-         *             (default is everything, "pattern" will only dump the pattern, "patch" will only dump the patch)
+         * This will include regiom, pattern, and patch data
+         * @see dumpPattern(), dumpPatch()
          */
-        std::string dump(std::string_view what = "") const;
+        std::string dump() const;
+
+        /**
+         * @brief Create a pretty representation of the pattern and matched data
+         * @param showMatches If greater than 0, override the default number of matches to show
+         */
+        std::string dumpPattern(size_t showMatches = defaultShowMatches) const;
+
+        std::string dumpPatch() const;
     };
 }

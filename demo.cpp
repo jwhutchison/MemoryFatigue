@@ -143,7 +143,7 @@ int main(int argc, char* args[])
         logError("Failed to apply patch");
     }
 
-    logInfo(patch.dump("patch"));
+    logInfo(patch.dumpPatch());
 
     // Restore the patch
     if (patch.restore()) {
@@ -152,7 +152,7 @@ int main(int argc, char* args[])
         logError("Failed to restore patch");
     }
 
-    logInfo(patch.dump("patch"));
+    logInfo(patch.dumpPatch());
 
     // Do a not-found patch
     Patch badPatch(textSection, "FF 01 ?? ?? 04 04 06 07 08 09 10", 2, "01");

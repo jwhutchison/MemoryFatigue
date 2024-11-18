@@ -67,9 +67,8 @@ namespace fatigue {
             }
 
             if (m_matches.size() > 1) {
-                size_t maxShow = 5;
                 std::string show = "";
-                for (size_t i = 0; i < maxShow && i < m_matches.size(); i++) {
+                for (size_t i = 1; i < defaultShowMatches && i < m_matches.size(); i++) {
                     show += std::format("{:#x}, ", m_matches.at(i));
                 }
 
@@ -78,9 +77,9 @@ namespace fatigue {
                     "  Region: {}\n"
                     "  Pattern: {}\n"
                     "  Using first match at {:#x}\n"
-                    "  Matched at: {}{}",
+                    "  Also matched at {}{}",
                     m_matches.size(), m_region.toString(), m_pattern, m_address,
-                    show, (m_matches.size() > maxShow ? "..." : "")
+                    show, (m_matches.size() > defaultShowMatches ? "..." : "")
                 ));
             }
         } else {
@@ -193,99 +192,125 @@ namespace fatigue {
         return out.str();
     }
 
-    std::string Patch::dump(std::string_view what) const
+    std::string Patch::dump() const
     {
-        // Determine what to show
-        bool showHead = false;
-        bool showPattern = false;
-        bool showPatch = false;
-
-        if (what == "pattern") showPattern = true;
-        else if (what == "patch") showPatch = true;
-        else {
-            // Default to showing everything
-            showHead = true;
-            showPattern = true;
-            showPatch = true;
-        }
-
-        Color Head = Color::Bold;
-        Color Addr = Color::Dim;
-        Color Err = Color::Red;
-        Color Warn = Color::Yellow;
-        Color Active = Color::Green;
-        Color Inactive = Color::Yellow;
-        Color Found = Color::BrightBlue;
-        Color Reset = Color::Reset;
-
-        size_t col0size = sizeof(uintptr_t) + 2; // "0x123456: ", "Pattern:  "
         std::stringstream out;
 
-        if (showHead) {
-            // Header: Region
-            out << "Patch on region " << m_region.toString() << std::endl;
+        // Header: Region
+        out << "Patch on region " << m_region.toString() << std::endl;
 
-            // If not valid, print why
-            if (!isValid()) {
-                out << Head << "Patch is invalid: " << Reset
-                    << (m_region.isValid() ? "Patch address not found" : "Region is invalid")
-                    << " ❌"
-                    << std::endl;
-            }
+        // If not valid, print why
+        if (!isValid()) {
+            out << Color::Bold << "Patch is invalid: " << Color::Reset
+                << (m_region.isValid() ? "Patch address not found" : "Region is invalid")
+                << " ❌"
+                << std::endl;
         }
 
         // If pattern, print pattern or matched data with <> around wildcard bytes
-        if (showPattern && !m_pattern.empty()) {
-            std::vector<std::string> splitPattern = hex::split(m_pattern);
-
-            out << Head << std::format("{:{}s}", "Pattern: ", col0size) << Reset;
-            if (m_matched.empty()) {
-                out << Err << "Not found ❌" << Reset;
-            } else if (m_matches.size() > 1) {
-                out << Warn << "Multiple matches ✔ " << Reset << std::endl
-                    << std::format("{:{}s}", "", col0size)
-                    << "Check Patch.matches() (pattern may be too loose)" << std::endl
-                    << std::format("{:{}s}", "", col0size)
-                    << "Using first match at:";
-            } else {
-                out << Found << "Found ✔" << Reset;
-            }
-            out << std::endl;
-
-            // Print address if found at beginning
-            if (m_matched.empty()) {
-                out << std::format("{:{}s}", "", col0size);
-            } else {
-                out << Addr << std::format("{:#{}x}: ", m_address, sizeof(uintptr_t)) << Reset;
-            }
-
-            // Print pattern with matched bytes in <>
-            for (std::size_t i = 0; i < splitPattern.size(); ++i) {
-                std::string byte = splitPattern[i];
-                if (byte == "??") {
-                    if (m_matched.empty()) {
-                        out << Err << "<\?\?>" << Reset;
-                    } else {
-                        out << Found << "<" << hex::toHex(&m_matched.at(i), sizeof(uint8_t)) << ">" << Reset;
-                    }
-                } else {
-                    out << byte;
-                }
-                out << " ";
-            }
-
-
-
-            out << std::endl;
-        }
-
+        out << dumpPattern();
 
         // Original data and patch data with [] around changed bytes
-        // Read a few bytes before and after the patch address to show context
-        if (showPatch && m_found && !m_patch.empty()) {
+        out << std::endl
+            << dumpPatch();
+
+        return out.str();
+    }
+
+    std::string Patch::dumpPattern(size_t showMatches) const
+    {
+        if (showMatches == 0) showMatches = defaultShowMatches;
+
+        std::stringstream out;
+
+        if (!m_pattern.empty()) {
+            out << Color::Bold << std::format("{:{}s}", "Pattern: ", labelWidth) << Color::Reset;
+            if (m_matched.empty()) {
+                out << Color::Red << "Not found ❌" << Color::Reset;
+            } else if (m_matches.size() > 1) {
+                out << Color::Yellow << "Multiple matches ✔ " << Color::Reset << std::endl
+                    << std::format("{:{}s}", "", labelWidth)
+                    << "Check Patch.matches(); pattern may be too loose" << std::endl
+                    << std::format("{:{}s}", "", labelWidth)
+                    << std::format("Using first match at {:#x}", m_address);
+            } else {
+                out << Color::BrightBlue << "Found ✔" << Color::Reset;
+            }
+            out << std::endl;
+
+            // Print address(es)
+            if (m_matched.empty()) {
+                out << dumpPatternAt(-1);
+            } else {
+                out << dumpPatternAt(m_address, Color::BrightBlue);
+
+                // If multiple matches, print the first few
+                if (m_matches.size() > 1) {
+                    for (size_t i = 1; i < showMatches && i < m_matches.size(); i++) {
+                        out << dumpPatternAt(m_matches.at(i), Color::Yellow);
+                    }
+                    if (m_matches.size() > showMatches) {
+                        out << std::format("{:{}s}", "", labelWidth)
+                            << Color::Dim << std::format("... {} more", m_matches.size() - showMatches)
+                            << Color::Reset << std::endl;
+                    }
+                }
+            }
+        }
+
+        return out.str();
+    }
+
+    std::string Patch::dumpPatternAt(long address, Color highlight) const
+    {
+        std::stringstream out;
+
+        // Label
+        if (address >= 0) {
+            out << Color::Dim << std::format("{:#{}x}: ", address, sizeof(uintptr_t)) << Color::Reset;
+        } else {
+            // If address is -1, use not-found formatting
+            out << std::format("{:{}s}", "", labelWidth);
+        }
+
+        // For each byte in the pattern, print the byte or the matched byte in <>
+        std::vector<std::string> splitPattern = hex::split(m_pattern);
+        // Read the matched data at the address if it's valid
+        // So we can show the actual byte instead of a wildcard
+        std::vector<uint8_t> matched(splitPattern.size());
+        if (address >= 0) {
+            m_region.read(address, matched.data(), matched.size());
+        }
+
+        for (std::size_t i = 0; i < splitPattern.size(); ++i) {
+            std::string byte = splitPattern.at(i);
+            // Substitute the matched byte for wildcards
+            if (byte == "??") {
+                if (address >= 0) {
+                    out << highlight << "<"
+                        << hex::toHex(&matched.at(i), sizeof(uint8_t))
+                        << ">" << Color::Reset;
+                } else {
+                    // If address is -1, use not-found formatting
+                    out << Color::Red << "<\?\?>" << Color::Reset;
+                }
+            } else {
+                out << byte;
+            }
+            out << " ";
+        }
+        out << std::endl;
+
+        return out.str();
+    }
+
+    std::string Patch::dumpPatch() const
+    {
+        std::stringstream out;
+
+        if (m_found && !m_patch.empty()) {
             // Header
-            out << std::endl
-                << Head << std::format("{:{}s}", "Patch: ", col0size) << Reset
+            out << Color::Bold << std::format("{:{}s}", "Patch: ", labelWidth) << Color::Reset
                 << m_patch.size() << " bytes at "
                 << std::format("{:#x}", m_address);
 
@@ -297,11 +322,11 @@ namespace fatigue {
             out << std::endl;
 
             // Status
-            out << Head << std::format("{:{}s}", "Status: ", col0size) << Reset;
+            out << Color::Bold << std::format("{:{}s}", "Status: ", labelWidth) << Color::Reset;
             if (m_applied) {
-                out << Active << "Active 🔨" << Reset;
+                out << Color::Green << "Active 🔨" << Color::Reset;
             } else {
-                out << Inactive << "Inactive" << Reset;
+                out << Color::Yellow << "Inactive" << Color::Reset;
             }
             out << std::endl;
 
@@ -318,14 +343,14 @@ namespace fatigue {
 
             // Show the context with patch bytes in []
             for (size_t i = 0; i < context.size();) {
-                out << Addr << std::format("{:#{}x}: ", contextAddress + i, sizeof(uintptr_t)) << Reset;
+                out << Color::Dim << std::format("{:#{}x}: ", contextAddress + i, sizeof(uintptr_t)) << Color::Reset;
 
                 for (std::size_t j = 0; j < 16; j++, i++) {
                     bool isPatch = (contextAddress + i) >= patchAddress() && (contextAddress + i) < patchAddress() + m_patch.size();
 
-                    if (isPatch) out << (m_applied ? Active : Inactive) << "[";
+                    if (isPatch) out << (m_applied ? Color::Green : Color::Yellow) << "[";
                     out << hex::toHex(&context.at(i), sizeof(uint8_t));
-                    if (isPatch) out << "]" << Reset;
+                    if (isPatch) out << "]" << Color::Reset;
                     out << " ";
                 }
 
@@ -333,20 +358,20 @@ namespace fatigue {
             }
 
             // Show original data and patch data, at the correct column
-            out << Head << std::format("{:{}s}", "Original:", col0size + contextPadding * 3) << Reset;
+            out << Color::Bold << std::format("{:{}s}", "Original:", labelWidth + contextPadding * 3) << Color::Reset;
             for (uint8_t byte : m_original) {
-                out << Inactive << "[" << hex::toHex(&byte, sizeof(uint8_t)) << "] " << Reset;
+                out << Color::Yellow << "[" << hex::toHex(&byte, sizeof(uint8_t)) << "] " << Color::Reset;
             }
             out << std::endl;
 
-            out << Head << std::format("{:{}s}", "Patch:", col0size + contextPadding * 3) << Reset;
+            out << Color::Bold << std::format("{:{}s}", "Patch:", labelWidth + contextPadding * 3) << Color::Reset;
             for (uint8_t byte : m_patch) {
-                out << Active << "[" << hex::toHex(&byte, sizeof(uint8_t)) << "] " << Reset;
+                out << Color::Green << "[" << hex::toHex(&byte, sizeof(uint8_t)) << "] " << Color::Reset;
             }
             out << std::endl;
         } else {
-            out << Head << std::format("{:{}s}", "Status: ", col0size) << Reset
-                << Err << (m_patch.empty() ? "No patch data" : "No patch address") << " ❌" << Reset
+            out << Color::Bold << std::format("{:{}s}", "Status: ", labelWidth) << Color::Reset
+                << Color::Red << (m_patch.empty() ? "No patch data" : "No patch address") << " ❌" << Color::Reset
                 << std::endl;
         }
 
