@@ -4,6 +4,7 @@
 #include "utils.hpp"
 #include "mem.hpp"
 #include "Region.hpp"
-#include "Patch.hpp"
 #include "proc.hpp"
 #include "pe.hpp"
+#include "elf.hpp"
+#include "Patch.hpp"

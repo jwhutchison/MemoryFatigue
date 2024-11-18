@@ -83,5 +83,4 @@ namespace fatigue::pe {
         std::vector<Region> getSections();
         Region getSection(const std::string_view &name = ".text");
     };
-
 } // namespace fatigue::pe

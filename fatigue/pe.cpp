@@ -4,7 +4,9 @@ using namespace fatigue::mem::sys;
 
 namespace fatigue::pe {
     bool isValidPE(pid_t pid, uintptr_t address) {
-        return false;
+        DosHeader dos;
+        sys::read(pid, address, &dos, sizeof(dos));
+        return dos.magic == DOS_MAGIC;
     }
 
     bool isValidPE(proc::Map& map) {
