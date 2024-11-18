@@ -82,103 +82,124 @@ options parseArgs(int argc, char* args[]) {
 
 bool patchFps(Region const &text, Region const &data, int fps)
 {
-    // Framelock (fps delta) and speed fix must both be applied or not at all
-    uintptr_t framelockAddress = text.findFirst(sekiro::PATTERN_FRAMELOCK_FUZZY);
-    int framelockOffset = sekiro::PATTERN_FRAMELOCK_FUZZY_OFFSET;
     float framelockPatch = 1.0f / fps; // Framelock delta: frames per second -> seconds per frame
-
-    uintptr_t speedFixAddress = text.findFirst(sekiro::PATTERN_FRAMELOCK_SPEED_FIX);
-    int speedFixOffset = sekiro::PATTERN_FRAMELOCK_SPEED_FIX_OFFSET;
     float speedFixPatch = sekiro::findSpeedFixForRefreshRate(fps);
 
-    if (!framelockAddress || !speedFixAddress) {
+    // Framelock (fps delta) and speed fix must both be applied or not at all
+    Patch patchFramelock(text,
+                         sekiro::PATTERN_FRAMELOCK_FUZZY,
+                         sekiro::PATTERN_FRAMELOCK_FUZZY_OFFSET,
+                         &framelockPatch, sizeof(framelockPatch));
+
+    Patch patchSpeedFix(text,
+                        sekiro::PATTERN_FRAMELOCK_SPEED_FIX,
+                        [](Patch const &patch) {
+                            int speedFixOffset = sekiro::PATTERN_FRAMELOCK_SPEED_FIX_OFFSET;
+                            // Credit to @Lahvuun for sekirofpsunlock for the following
+                            // At the original offset lives an internal offset to the actual speed fix address, so read it
+                            uint32_t speedFixInternalOffset;
+                            patch.region().read(patch.address() + speedFixOffset, &speedFixInternalOffset);
+                            // Then find the actual offset by adding the internal offset value to the end of the original offset (+4 bytes)
+                            return speedFixOffset + 4 + speedFixInternalOffset;
+                        },
+                        &speedFixPatch, sizeof(speedFixPatch));
+
+    if (patchFramelock.isValid() && patchSpeedFix.isValid()) {
+        logInfo(std::format("Patching FPS to {} (speed fix {})", fps, speedFixPatch));
+    } else {
         logWarning("Framelock or speed fix not found");
         return false;
     }
 
-    logInfo(std::format("Patching FPS to {} (speed fix {})", fps, speedFixPatch));
+    if (patchFramelock.apply() && patchSpeedFix.apply()) {
+        logInfo("...Ok");
+        return true;
+    } else {
+        logWarning("Failed to apply FPS patch");
+        return false;
+    }
 
-    // Apply FPS
-    text.write(framelockAddress + framelockOffset, &framelockPatch, sizeof(framelockPatch));
-
-    // Apply speed fix
-    // Credit to @Lahvuun for sekirofpsunlock for the following
-    // The pattern match + offset gives the address of an internal offset to the actual speed fix address, so read it
-    uint32_t speedFixInternalOffset;
-    text.read(speedFixAddress + speedFixOffset, &speedFixInternalOffset);
-    // Then find the actual address by adding the offset value to the end of the offset value (+4 bytes)
-    uint32_t speedFixPatchAddress = speedFixAddress + speedFixOffset + 4 + speedFixInternalOffset;
-    // The actual address may be past the end of the .text section, make sure section bounds are not enforced
-    text.write(speedFixPatchAddress, &speedFixPatch, sizeof(speedFixPatch));
-
-    logInfo("...Ok");
-    return true;
 }
 
 bool patchResolution(Region const &text, Region const &data, sekiro::Resolution const &resolution)
 {
     // Width, height, and scaling fix (allow widescreen) must all be applied or not at all
-    uintptr_t resolutionAddress = data.findFirst(
-        resolution.width < 1920
-            ? sekiro::PATTERN_RESOLUTION_DEFAULT_720
-            : sekiro::PATTERN_RESOLUTION_DEFAULT);
+    Patch patchResolution(data,
+                          resolution.width < 1920
+                              ? sekiro::PATTERN_RESOLUTION_DEFAULT_720
+                              : sekiro::PATTERN_RESOLUTION_DEFAULT,
+                          0,
+                          &resolution, sizeof(resolution));
 
-    uintptr_t scalingFixAddress = text.findFirst(sekiro::PATTERN_RESOLUTION_SCALING_FIX);
-    std::vector<uint8_t> scalingFixPatch = hex::parse(sekiro::PATCH_RESOLUTION_SCALING_FIX_ENABLE);
+    Patch patchScalingFix(text, sekiro::PATTERN_RESOLUTION_SCALING_FIX, 0, sekiro::PATCH_RESOLUTION_SCALING_FIX_ENABLE);
 
-    if (!resolutionAddress || !scalingFixAddress) {
+    if (patchResolution.isValid() && patchScalingFix.isValid()) {
+        logInfo(std::format("Patching resolution to {}x{}", resolution.width, resolution.height));
+    } else {
         logWarning("Resolution or scaling fix not found");
         return false;
     }
 
-    logInfo(std::format("Patching resolution to {}x{}", resolution.width, resolution.height));
-
-    // Apply resolution
-    data.write(resolutionAddress, &resolution, sizeof(resolution));
-
-    // Apply resolution scaling fix
-    text.write(scalingFixAddress, scalingFixPatch.data(), scalingFixPatch.size());
-
-    logInfo("...Ok");
-    return true;
+    if (patchResolution.apply() && patchScalingFix.apply()) {
+        logInfo("...Ok");
+        return true;
+    } else {
+        logWarning("Failed to apply resolution patch");
+        return false;
+    }
 }
 
 bool patchCameraReset(Region const &text, Region const &data, bool enabled = false)
 {
     // Default game behavior is enabled, so default patch is disable
-    uintptr_t cameraResetAddress = text.findFirst(sekiro::PATTERN_CAMRESET_LOCKON);
-    int cameraResetOffset = sekiro::PATTERN_CAMRESET_LOCKON_OFFSET;
-    uint8_t cameraResetPatch = enabled ? sekiro::PATCH_CAMRESET_LOCKON_ENABLE : sekiro::PATCH_CAMRESET_LOCKON_DISABLE;
+    Patch patchCameraReset(text,
+                           sekiro::PATTERN_CAMRESET_LOCKON,
+                           sekiro::PATTERN_CAMRESET_LOCKON_OFFSET,
+                           enabled
+                               ? sekiro::PATCH_CAMRESET_LOCKON_ENABLE
+                               : sekiro::PATCH_CAMRESET_LOCKON_DISABLE);
 
-    if (!cameraResetAddress) {
+    if (patchCameraReset.isValid()) {
+        logInfo(enabled ? "Enabling camera reset" : "Disabling camera reset");
+    } else {
         logWarning("Camera reset not found");
         return false;
     }
 
-    logInfo(enabled ? "Disabling camera reset" : "Enabling camera reset");
-    text.write(cameraResetAddress + cameraResetOffset, &cameraResetPatch, sizeof(cameraResetPatch));
-    logInfo("...Ok");
-    return true;
+    if (patchCameraReset.apply()) {
+        logInfo("...Ok");
+        return true;
+    } else {
+        logWarning("Failed to apply camera reset patch");
+        return false;
+    }
 }
 
 bool patchAutoloot(Region const &text, Region const &data, bool enabled = true)
 {
     // Default game behavior is disabled, so default patch is enabled
-    uintptr_t autolootAddress = text.findFirst(sekiro::PATTERN_AUTOLOOT);
-    int autolootOffset = sekiro::PATTERN_AUTOLOOT_OFFSET;
-    std::vector<uint8_t> autolootPatch = hex::parse(enabled ? sekiro::PATCH_AUTOLOOT_ENABLE : sekiro::PATCH_AUTOLOOT_DISABLE);
+    Patch patchAutoloot(text,
+                        sekiro::PATTERN_AUTOLOOT,
+                        sekiro::PATTERN_AUTOLOOT_OFFSET,
+                        enabled
+                            ? sekiro::PATCH_AUTOLOOT_ENABLE
+                            : sekiro::PATCH_AUTOLOOT_DISABLE);
 
-    if (!autolootAddress) {
+    if (patchAutoloot.isValid()) {
+        logInfo(enabled ? "Enabling autoloot" : "Disabling autoloot");
+    } else {
         logWarning("Autoloot not found");
         return false;
     }
 
-    logInfo(enabled ? "Enabling autoloot" : "Disabling autoloot");
-    text.write(autolootAddress + autolootOffset, autolootPatch.data(), autolootPatch.size());
-    logInfo("...Ok");
-    return true;
+    if (patchAutoloot.apply()) {
+        logInfo("...Ok");
+        return true;
+    } else {
+        logWarning("Failed to apply autoloot patch");
+        return false;
+    }
 }
-
 
 // Main entry point
 
@@ -187,14 +208,14 @@ int main(int argc, char* args[])
     // Parse args and complain if invalid
     options opts = parseArgs(argc, args);
 
-    // Debug output
-    // log::setLogLevel(log::LogLevel::Debug); // comment to show
-    logDebug(std::format("fps: {}, resolution: w{} h{}, cameraReset: {}, autoloot: {}, verbose: {}, timeout: {}, delay: {}",
-        opts.fps, opts.resolution.width, opts.resolution.height, opts.cameraReset, opts.autoloot, opts.verbose, opts.timeout, opts.delay));
-
     // Set up logging
     log::setLogFormat(log::LogFormat::Compact);
     log::setLogLevel(opts.verbose ? log::LogLevel::Info : log::LogLevel::Warning);
+
+    // Debug options
+    // log::setLogLevel(log::LogLevel::Debug); // uncomment to show debug
+    logDebug(std::format("fps: {}, resolution: w{} h{}, cameraReset: {}, autoloot: {}, verbose: {}, timeout: {}, delay: {}",
+        opts.fps, opts.resolution.width, opts.resolution.height, opts.cameraReset, opts.autoloot, opts.verbose, opts.timeout, opts.delay));
 
     // Use IO if available, otherwise use PTRACE
     mem::setAccessMethod(mem::AccessMethod::IO);

@@ -14,7 +14,7 @@ namespace fatigue {
     class Patch {
     protected:
         /** Character width of the first colomn in dump outputs */
-        static const size_t labelWidth = sizeof(uintptr_t) + 2; // "0x123456: ", "Pattern:  "
+        static const size_t labelWidth = sizeof(unsigned long long) + 4; // Max address width + "0x" + ": "
         static const size_t defaultShowMatches = 5;
 
         Region m_region{};
@@ -49,6 +49,9 @@ namespace fatigue {
         /** @brief Initialize a patch with a region, address, and patch hex string */
         Patch(const Region& region, uintptr_t address, const std::string& patch)
             : Patch(region, address, hex::parse(patch)) {}
+        /** @brief Initialize a patch with a region, address, and patch data chunk */
+        Patch(const Region& region, uintptr_t address, const void* patch, size_t size)
+            : Patch(region, address, hex::parse(patch, size)) {}
 
         /** @brief Initialize a patch with a region, pattern, offset, and patch data */
         Patch(const Region& region, const std::string& pattern, int offset, const std::vector<uint8_t>& patch)
@@ -59,6 +62,9 @@ namespace fatigue {
         /** @brief Initialize a patch with a region, pattern, offset, and patch hex string */
         Patch(const Region& region, const std::string& pattern, int offset, const std::string& patch)
             : Patch(region, pattern, offset, hex::parse(patch)) {}
+        /** @brief Initialize a patch with a region, pattern, offset, and patch data chunk */
+        Patch(const Region& region, const std::string& pattern, int offset, const void* patch, size_t size)
+            : Patch(region, pattern, offset, hex::parse(patch, size)) {}
 
         /** @brief Initialize a patch with a region, pattern, offset function, and patch data */
         Patch(const Region& region, const std::string& pattern, std::function<int(Patch const&)> offset_fn, const std::vector<uint8_t>& patch)
@@ -70,6 +76,9 @@ namespace fatigue {
         /** @brief Initialize a patch with a region, pattern, offset function, and patch hex string */
         Patch(const Region& region, const std::string& pattern, std::function<int(Patch const&)> offset_fn, const std::string& patch)
             : Patch(region, pattern, offset_fn, hex::parse(patch)) {}
+        /** @brief Initialize a patch with a region, pattern, offset function, and patch data chunk */
+        Patch(const Region& region, const std::string& pattern, std::function<int(Patch const&)> offset_fn, const void* patch, size_t size)
+            : Patch(region, pattern, offset_fn, hex::parse(patch, size)) {}
 
         ~Patch() = default;
 

@@ -267,7 +267,9 @@ namespace fatigue {
 
         // Label
         if (address >= 0) {
-            out << Color::Dim << std::format("{:#{}x}: ", address, sizeof(uintptr_t)) << Color::Reset;
+            out << Color::Dim
+                << std::format("{:{}s}", std::format("{:#x}: ", address), labelWidth)
+                << Color::Reset;
         } else {
             // If address is -1, use not-found formatting
             out << std::format("{:{}s}", "", labelWidth);
@@ -343,7 +345,9 @@ namespace fatigue {
 
             // Show the context with patch bytes in []
             for (size_t i = 0; i < context.size();) {
-                out << Color::Dim << std::format("{:#{}x}: ", contextAddress + i, sizeof(uintptr_t)) << Color::Reset;
+                out << Color::Dim
+                    << std::format("{:{}s}", std::format("{:#x}: ", contextAddress + i), labelWidth)
+                    << Color::Reset;
 
                 for (std::size_t j = 0; j < 16; j++, i++) {
                     bool isPatch = (contextAddress + i) >= patchAddress() && (contextAddress + i) < patchAddress() + m_patch.size();

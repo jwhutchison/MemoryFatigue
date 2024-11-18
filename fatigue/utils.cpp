@@ -249,6 +249,22 @@ namespace fatigue {
             return out;
         }
 
+        std::vector<uint8_t> parse(const void* data, const std::size_t length)
+        {
+            if (!data || length == 0)
+                return {};
+
+            const uint8_t* bytes = static_cast<uint8_t const*>(data);
+
+            std::vector<uint8_t> out;
+            out.reserve(length);
+            for (std::size_t i = 0; i < length; ++i) {
+                out.push_back(bytes[i]);
+            }
+
+            return out;
+        }
+
         std::string dump(const void* data, std::size_t length, unsigned long long startAddress, std::size_t rowSize, bool showASCII)
         {
             if (!data || length == 0 || rowSize == 0)

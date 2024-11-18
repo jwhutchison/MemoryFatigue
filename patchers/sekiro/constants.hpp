@@ -273,8 +273,8 @@ namespace sekiro
         */
     const std::string PATTERN_CAMRESET_LOCKON = "C6 86 ?? ?? 00 00 ?? F3 0F 10 8E ?? ?? 00 00";
     const int PATTERN_CAMRESET_LOCKON_OFFSET = 6;
-    const uint8_t PATCH_CAMRESET_LOCKON_DISABLE = 0; // false
-    const uint8_t PATCH_CAMRESET_LOCKON_ENABLE = 1;  // true
+    const std::string PATCH_CAMRESET_LOCKON_DISABLE = "00"; // false
+    const std::string PATCH_CAMRESET_LOCKON_ENABLE = "01";  // true
 
 
     /**

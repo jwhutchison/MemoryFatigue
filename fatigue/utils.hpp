@@ -122,8 +122,14 @@ namespace fatigue {
         template <typename T>
         std::string toHex(const T &data) { return toHex(data, sizeof(T)); }
 
-        /** Convert a hexadecimal string to a chunk of data */
+        /** Convert a hexadecimal string to a vector of data */
         std::vector<uint8_t> parse(std::string_view hex);
+        /**
+         * Convert a chunk of data to a vector chunk of data
+         * Useful for creating Patch objects
+         * This isn't really "hex", but this is a good place for it
+         */
+        std::vector<uint8_t> parse(const void* data, const std::size_t length);
 
         /** Print HEX string from data; formatted uppercase with spaces between each byte pair */
         inline std::string toPrettyHex(const void* data, const std::size_t length) { return prettify(toHex(data, length)); }
