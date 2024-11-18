@@ -22,6 +22,11 @@ include_directories(
     include/
 )
 
+add_library(
+    memoryfatigue SHARED
+    ${FATIGUE_SRC}
+)
+
 add_executable(
     fatigue
     main.cpp

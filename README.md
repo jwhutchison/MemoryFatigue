@@ -26,8 +26,6 @@ See `CMakeLists.txt` and `demo.cpp` for a good example.
 
 - General purpose cli tool
 - ELF helpers
-- .so build
-- Move handy utilities to their own repos (log, color)
 - Tools for other games (?)
 
 ## Credits
