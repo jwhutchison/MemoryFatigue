@@ -25,7 +25,6 @@ See `CMakeLists.txt` and `demo.cpp` for a good example.
 ## TODO
 
 - General purpose cli tool
-- ELF helpers
 - Tools for other games (?)
 
 ## Credits

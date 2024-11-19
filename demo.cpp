@@ -27,7 +27,7 @@ int main(int argc, char* args[])
 
     // testLog();
 
-    logInfo("Step 1: Find EXE");
+    logInfo("Step 1: Find process");
 
     std::string processName = "sekiro.exe";
 
@@ -58,6 +58,25 @@ int main(int argc, char* args[])
 
     logInfo("Step 2: Get process map");
 
+    logInfo("Step 2.1: Get a map for an Elf file");
+
+    proc::Map soMap = proc::findMapEndsWith(pid, "steamoverlayvulkanlayer.so");
+
+    // if (soMap.isValid()) {
+    //     elf::ElfHeader elfhead = {0};
+    //     soMap.read(0, &elfhead);
+    //     logInfo(std::format("Elf Header: {:#x}", elfhead.magic));
+    //     std::cout << hex::dump(&elfhead, sizeof(elf::ElfHeader), soMap.start);
+    // }
+
+    elf::ElfMap elfMap(soMap);
+    logInfo(std::format("Elf Map {}", elfMap.toString()));
+
+    proc::detach(pid);
+    exit(0);
+
+    logInfo("Step 2.2: Get map for the EXE");
+
     // We want to find the process map for Sekiro.exe out of all the memory maps
     // loaded for the sekiro.exe process
     proc::Map map = proc::findMapEndsWith(pid, processName);
@@ -68,12 +87,11 @@ int main(int argc, char* args[])
 
     // Once we have the map, we can read from it directly
     logInfo("Step 2.5: Demo a memory read");
+
     if (map.isValid()) {
         pe::DosHeader dos = {0};
-        size_t bytesRead = 0;
-
-        bytesRead = map.read(0, &dos);
-        logInfo(std::format("read {} bytes at {:#x}", sizeof(dos), map.start));
+        map.read(0, &dos);
+        logInfo(std::format("DOS Header: {:#x}", dos.magic));
         std::cout << hex::dump(&dos, sizeof(pe::DosHeader), map.start) << std::endl;
     }
 
@@ -127,51 +145,7 @@ int main(int argc, char* args[])
 
     logInfo("Step 6: Apply a patch");
 
-    Patch patch(textSection, "C6 86 ?? ?? 00 00 ?? F3 0F 10 8E ?? ?? 00 00", 6, "01");
-
-    if (!patch.isValid()) {
-        logError("Patch is invalid");
-        return 1;
-    }
-
-    logInfo(patch.dump());
-
-    // Apply the patch
-    if (patch.apply()) {
-        logInfo("Patch applied");
-    } else {
-        logError("Failed to apply patch");
-    }
-
-    logInfo(patch.dumpPatch());
-
-    // Restore the patch
-    if (patch.restore()) {
-        logInfo("Patch restored");
-    } else {
-        logError("Failed to restore patch");
-    }
-
-    logInfo(patch.dumpPatch());
-
-    // Do a not-found patch
-    Patch badPatch(textSection, "FF 01 ?? ?? 04 04 06 07 08 09 10", 2, "01");
-
-    if (!badPatch.isValid()) {
-        logError("Bad patch is invalid (expected error)");
-    }
-
-    logInfo(badPatch.dump());
-
-    // Do a multi-found patch
-    Patch multiPatch(textSection, "00 00 ?? 00 00", 2, "01");
-
-    if (!multiPatch.isValid()) {
-        logError("Multi patch is invalid");
-    }
-
-    logInfo(multiPatch.dump());
-
+    // logInfo("Step 6.1: Manual patch");
 
     // logInfo("Searching for pattern: C6 86 ?? ?? 00 00 ?? F3 0F 10 8E ?? ?? 00 00");
     // uintptr_t found = textSection.findFirst("C6 86 ?? ?? 00 00 ?? F3 0F 10 8E ?? ?? 00 00");
@@ -214,7 +188,55 @@ int main(int argc, char* args[])
     //     logError("Pattern not found");
     // }
 
-    logInfo("Step 7: Detach from process");
+    // logInfo("Step 6.2: Using Patch class");
+
+    // Patch patch(textSection, "C6 86 ?? ?? 00 00 ?? F3 0F 10 8E ?? ?? 00 00", 6, "01");
+
+    // if (!patch.isValid()) {
+    //     logError("Patch is invalid");
+    //     return 1;
+    // }
+
+    // logInfo(patch.dump());
+
+    // // Apply the patch
+    // if (patch.apply()) {
+    //     logInfo("Patch applied");
+    // } else {
+    //     logError("Failed to apply patch");
+    // }
+
+    // logInfo(patch.dumpPatch());
+
+    // // Restore the patch
+    // if (patch.restore()) {
+    //     logInfo("Patch restored");
+    // } else {
+    //     logError("Failed to restore patch");
+    // }
+
+    // logInfo(patch.dumpPatch());
+
+    // // Do a not-found patch
+    // Patch badPatch(textSection, "FF 01 ?? ?? 04 04 06 07 08 09 10", 2, "01");
+
+    // if (!badPatch.isValid()) {
+    //     logError("Bad patch is invalid (expected error)");
+    // }
+
+    // logInfo(badPatch.dump());
+
+    // // Do a multi-found patch
+    // Patch multiPatch(textSection, "00 00 ?? 00 00", 2, "01");
+
+    // if (!multiPatch.isValid()) {
+    //     logError("Multi patch is invalid");
+    // }
+
+    // logInfo(multiPatch.dump());
+
+
+    logInfo("Done! Detach from process");
 
     proc::detach(pid);
 
