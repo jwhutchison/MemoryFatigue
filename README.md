@@ -23,6 +23,11 @@ Examples:
 - `build/bin/fatigue -s "sekiro.exe" --pattern "C6 86 ?? ??"` - Find a process by status name, search for
   a pattern, show information and exit
 
+## Sekiro: Shadows Die Twice Game Patcher
+
+Also included in releases is a patcher specifically for patching Sekiro in Linux to unlock FPS and some
+other handy features. See [patchers/sekiro/README.md] for details.
+
 ## Library
 
 For more complex patch tasks, you will need to build the tool you want. The code is fairly well documented
