@@ -28,7 +28,7 @@ options parseArgs(int argc, char* args[]) {
         TCLAP::SwitchArg cameraResetArg("c", "no-camera-reset", "Disable camera reset on lock-on when no target", cmd);
         TCLAP::SwitchArg autolootArg("a", "autoloot", "Enable autoloot", cmd);
 
-        TCLAP::SwitchArg verboseArg("V", "verbose", "Verbose output", cmd);
+        TCLAP::SwitchArg verboseArg("v", "verbose", "Verbose output", cmd);
         TCLAP::ValueArg<int> timeoutArg("T", "timeout", "Seconds to wait for game to start", false, 30, "int", cmd);
         TCLAP::ValueArg<int> delayArg("D", "delay", "Milliseconds to wait after game starts (increase if errors on start)", false, 1000, "int", cmd);
 
@@ -209,7 +209,7 @@ int main(int argc, char* args[])
     options opts = parseArgs(argc, args);
 
     // Set up logging
-    log::setLogFormat(log::LogFormat::Compact);
+    log::setLogFormat(log::LogFormat::Tiny);
     log::setLogLevel(opts.verbose ? log::LogLevel::Info : log::LogLevel::Warning);
 
     // Debug options

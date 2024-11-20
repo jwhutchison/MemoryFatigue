@@ -15,4 +15,3 @@ CMakeUserPresets.json
 # Build and local artifacts
 .vscode
 build
-temp
