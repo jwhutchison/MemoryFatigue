@@ -60,7 +60,20 @@ namespace fatigue::elf {
             return proc::Map::isValid() && isValidElf();
         }
 
-        std::vector<Region> getSections();
-        Region getSection(const std::string_view &name = ".text");
+        /**
+         * @brief Get all loaded segments from the ELF as regions
+         */
+        std::vector<Region> getLoaded();
+
+        /**
+         * @brief Get a single region for the entire loaded ELF
+         * @warning This is the laziest possible implementation to get loaded segments, but it should work for simple pattern scans
+         */
+        Region getLoadedRegion();
+
+        /**
+         * @brief Get all dynamic segments from the ELF as regions
+         */
+        std::vector<Region> getDynamic();
     };
 } // namespace fatigue::elf

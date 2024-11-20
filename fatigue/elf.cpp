@@ -31,42 +31,6 @@ namespace fatigue::elf {
             return;
         }
 
-        // std::string ident = hex::toPrettyHex(&m_header.e_ident, 16);
-
-        // logInfo(std::format("ELF Header fields:\n"
-        //                     "  Ident: {}\n"
-        //                     "  Type: {}\n"
-        //                     "  Machine: {}\n"
-        //                     "  Version: {}\n"
-        //                     "  Entry: {:#x}\n"
-        //                     "  Program Header Offset: {} {:#x}\n"
-        //                     "  Section Header Offset: {} {:#x}\n"
-        //                     "  Flags: {:#x}\n"
-        //                     "  ELF Header Size: {}\n"
-        //                     "  Program Header Entry Size: {} {:#x}\n"
-        //                     "  Program Header Entry Count: {}\n"
-        //                     "  Section Header Entry Size: {} {:#x}\n"
-        //                     "  Section Header Entry Count: {}\n"
-        //                     "  Section Header String Table Index: {}\n"
-        //                     "{}",
-        //                     ident,
-        //                     m_header.e_type, m_header.e_machine, m_header.e_version,
-        //                     m_header.e_entry,
-        //                     m_header.e_phoff, m_header.e_phoff,
-        //                     m_header.e_shoff, m_header.e_shoff,
-        //                     m_header.e_flags,
-        //                     m_header.e_ehsize,
-        //                     m_header.e_phentsize, m_header.e_phentsize,
-        //                     m_header.e_phnum,
-        //                     m_header.e_shentsize, m_header.e_shentsize,
-        //                     m_header.e_shnum,
-        //                     m_header.e_shstrndx,
-        //                     ""
-        // ));
-
-        // logInfo(std::format("Reading {} program headers of size {} starting at {:#x} {:#x}",
-        //                     m_header.e_phnum, m_header.e_phentsize,
-        //                     m_header.e_phoff, start + m_header.e_phoff));
         // Get program headers in a single read
         m_segments.resize(m_header.e_phnum);
         read(
@@ -78,47 +42,44 @@ namespace fatigue::elf {
             logError(std::format("Invalid segment headers for {} {}", pid, name));
             return;
         }
-
-        // logInfo("Segment Headers:");
-        // for (auto &it : m_segments) {
-        //     std::cout << std::format(
-        //         "Segment Header: {:#x} {:#x} {:#x}",
-        //         it.p_type, it.p_vaddr, it.p_memsz
-        //     ) << std::endl;
-
-        //     if (it.p_type == PT_LOAD) {
-        //         std::cout << "  Loadable Segment" << std::endl;
-        //     }
-
-        //     if (it.p_type == PT_DYNAMIC) {
-        //         std::cout << "  Dynamic Segment" << std::endl;
-        //     }
-        // }
-        // std::cout << "  ...Ok" << std::endl;
     }
 
-    std::vector<Region> ElfMap::getSections()
+    std::vector<Region> ElfMap::getLoaded()
     {
-        std::vector<Region> sections;
+        std::vector<Region> regions;
         for (auto &it : m_segments) {
-            // std::string name(reinterpret_cast<char*>(m_sharedStrings.data() + it.name));
-            // name = string::trim(name);
-            if (it.p_type != PT_LOAD) continue;
-            sections.push_back(Region(pid, start + it.p_vaddr, start + it.p_vaddr + it.p_memsz));
+            if (it.p_type == PT_LOAD) {
+                regions.push_back(Region(pid, start + it.p_vaddr, start + it.p_vaddr + it.p_memsz));
+            }
         }
-        return sections;
+        return regions;
+
     }
 
-    Region ElfMap::getSection(const std::string_view &name)
+    Region ElfMap::getLoadedRegion()
     {
+        // Get the minimum and maximum addresses of the loaded segments, create a single region
+        uintptr_t min = std::numeric_limits<uintptr_t>::max();
+        uintptr_t max = 0;
         for (auto &it : m_segments) {
-            // std::string secName(reinterpret_cast<char*>(m_sharedStrings.data() + it.name));
-            // secName = string::trim(secName);
-            // // if secion name starts with a ., match with or without the dot
-            // if (name == secName || (secName.starts_with(".") && name == secName.substr(1)))
-            //     return Region(pid, start + it.addr, start + it.addr + it.size, secName);
+            if (it.p_type == PT_LOAD) {
+                min = std::min(min, it.p_vaddr);
+                max = std::max(max, it.p_vaddr + it.p_memsz);
+            }
         }
-        // Return an invalid region if not found
-        return Region();
+        return min < max ? Region(pid, start + min, start + max, "Loaded Regions") : Region();
     }
+
+    std::vector<Region> ElfMap::getDynamic()
+    {
+        std::vector<Region> regions;
+        for (auto &it : m_segments) {
+            if (it.p_type == PT_DYNAMIC) {
+                regions.push_back(Region(pid, start + it.p_vaddr, start + it.p_vaddr + it.p_memsz));
+            }
+        }
+        return regions;
+    }
+
+
 } // namespace fatigue::pe

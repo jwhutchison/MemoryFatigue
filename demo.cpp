@@ -58,9 +58,9 @@ int main(int argc, char* args[])
 
     logInfo("Step 2: Get process map");
 
-    logInfo("Step 2.1: Get a map for an Elf file");
+    logInfo("Step 2.1: Get a map for an Elf file (skipped)");
 
-    proc::Map soMap = proc::findMapEndsWith(pid, "steamoverlayvulkanlayer.so");
+    // proc::Map soMap = proc::findMapEndsWith(pid, "steamoverlayvulkanlayer.so");
 
     // if (soMap.isValid()) {
     //     elf::ElfHeader elfhead = {0};
@@ -69,11 +69,8 @@ int main(int argc, char* args[])
     //     std::cout << hex::dump(&elfhead, sizeof(elf::ElfHeader), soMap.start);
     // }
 
-    elf::ElfMap elfMap(soMap);
-    logInfo(std::format("Elf Map {}", elfMap.toString()));
-
-    proc::detach(pid);
-    exit(0);
+    // elf::ElfMap elfMap(soMap);
+    // logInfo(std::format("Elf Map {}", elfMap.toString()));
 
     logInfo("Step 2.2: Get map for the EXE");
 
