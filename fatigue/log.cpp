@@ -76,8 +76,10 @@ namespace fatigue::log {
         // For warnings and errors, output to cerr, else to cout
         std::ostream &out = (lvl == LogLevel::Error || lvl == LogLevel::Warning) ? std::cerr : std::cout;
 
-        // Start header
-        out << to_tag(lvl) << ' ';
+        // Start header (do not show in NoLabel)
+        if (getLogFormat() < LogFormat::NoLabel) {
+            out << to_tag(lvl) << ' ';
+        }
 
         // In default or verbose, output timestamp and a linebreak
         if (getLogFormat() <= LogFormat::Default) {

@@ -276,16 +276,21 @@ namespace fatigue {
 
             for (size_t i = 0; i < length; i += rowSize)
             {
+                // Format to hex digit, with constant width
+                std::string label = std::format("{:#0{}x}:", i + startAddress, sizeof(size_t) + 2);
+                // Format to ascii string, with constant width
+                std::string ascii = showASCII ? toAscii(&bytes[i], std::min(rowSize, length - i)) : "";
+
                 out += std::format(
-                    "{:#08x}: {:{}s} {}\n",
+                    "{}  {:{}s} {}\n",
                     // offset
-                    i + startAddress,
+                    color::colorize(color::Color::Dim, label),
                     // hex
                     toPrettyHex(&bytes[i], std::min(rowSize, length - i)),
                     // hex padding (sets width of field)
                     rowSize * 3,
                     // ascii
-                    showASCII ? toAscii(&bytes[i], std::min(rowSize, length - i)) : ""
+                    color::colorize(color::Color::Dim, ascii)
                 );
             }
 

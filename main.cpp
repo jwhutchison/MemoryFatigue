@@ -11,10 +11,13 @@ struct options {
     int pid = -1;
     std::string cmdline;
     std::string statusName;
+    std::string map;
 
     std::string section;
+    long long address = -1;
     std::string pattern;
     size_t offset = 0;
+    int read = -1;
     std::string patch;
 
     bool dryRun = false;
@@ -29,16 +32,23 @@ options parseArgs(int argc, char* args[]) {
     try {
         // Define the command line parser
         TCLAP::CmdLine cmd("Memory Fatigue PE process patcher", ' ', "1.0");
-
+        // Process options
         TCLAP::ValueArg<int> pidArg("p", "pid", "Use a specific process PID", false, -1, "int", cmd);
         TCLAP::ValueArg<std::string> cmdlineArg("c", "cmdline", "Find a process by cmdline (whole or part)", false, "", "string", cmd);
         TCLAP::ValueArg<std::string> statusNameArg("s", "status", "Find a process by status name", false, "", "string", cmd);
+        TCLAP::ValueArg<std::string> mapArg("m", "map", "Find the process map by name (whole or part, if different from status name)", false, "", "string", cmd);
 
+        // Location options
         TCLAP::ValueArg<std::string> sectionArg("", "section", "Section name to search for pattern (default '.text')", false, ".text", "string", cmd);
+        TCLAP::ValueArg<long long> addressArg("", "address", "Absolute address in section (skip pattern search)", false, -1, "int", cmd);
         TCLAP::ValueArg<std::string> patternArg("", "pattern", "Pattern to search for in section", false, "", "string", cmd);
         TCLAP::ValueArg<size_t> offsetArg("", "offset", "Offset from pattern to patch (default 0)", false, 0, "int", cmd);
+
+        // Actions
+        TCLAP::ValueArg<int> readArg("", "read", "Read and display a number of bytes at offset", false, -1, "int", cmd);
         TCLAP::ValueArg<std::string> patchArg("", "patch", "Patch to apply at offset", false, "", "string", cmd);
 
+        // Flags
         TCLAP::SwitchArg dryRunArg("d", "dry-run", "Dry run, don't apply patches", cmd);
         TCLAP::SwitchArg interactiveArg("i", "interactive", "Interactive mode, prompt before applying patches", cmd);
         TCLAP::SwitchArg verboseArg("v", "verbose", "Verbose output", cmd);
@@ -58,6 +68,7 @@ options parseArgs(int argc, char* args[]) {
         opts.pid = pidArg.getValue();
         opts.cmdline = cmdlineArg.getValue();
         opts.statusName = statusNameArg.getValue();
+        opts.map = mapArg.getValue();
 
         // At least one of pid, status, or cmdline must be specified
         if (opts.pid <=0 && opts.statusName.empty() && opts.cmdline.empty()) {
@@ -73,15 +84,29 @@ options parseArgs(int argc, char* args[]) {
             out.failure(cmd, err);
         }
 
-        // Patch opts
-        opts.section = sectionArg.getValue();
+        // Locate and Action opts
+        opts.section = string::toLower(sectionArg.getValue());
+        opts.address = addressArg.getValue();
         opts.pattern = patternArg.getValue();
         opts.offset = offsetArg.getValue();
         opts.patch = patchArg.getValue();
+        opts.read = readArg.getValue();
 
-        // If pattern is specified, section must also be specified
+        // Only one of pattern or address can be specified
+        if (!opts.pattern.empty() && opts.address >= 0) {
+            TCLAP::ArgException err("Pattern and address cannot both be used", "pattern/address");
+            out.failure(cmd, err);
+        }
+
+        // Only one of read or patch can be specified
+        if (opts.read >= 0 && !opts.patch.empty()) {
+            TCLAP::ArgException err("Read and patch cannot both be used", "read/patch");
+            out.failure(cmd, err);
+        }
+
+        // If pattern is specified, section must be specified
         if (!opts.pattern.empty() && opts.section.empty()) {
-            TCLAP::ArgException err("Section must be specified if pattern is specified", "section");
+            TCLAP::ArgException err("Section must be specified when using pattern", "section");
             out.failure(cmd, err);
         }
 
@@ -97,7 +122,7 @@ options parseArgs(int argc, char* args[]) {
             out.failure(cmd, err);
         }
 
-        // opts
+        // Flags
         opts.dryRun = dryRunArg.getValue();
         opts.interactive = interactiveArg.getValue();
         opts.verbose = verboseArg.getValue();
@@ -106,7 +131,7 @@ options parseArgs(int argc, char* args[]) {
         opts.delay = delayArg.getValue();
 
         // Some options require verbose to make any sense
-        if (opts.interactive || opts.dryRun || opts.patch.empty()) {
+        if (opts.interactive || opts.dryRun || opts.read >= 0 || opts.patch.empty()) {
             opts.verbose = true;
         }
 
@@ -119,15 +144,31 @@ options parseArgs(int argc, char* args[]) {
     }
 }
 
+// Confirm before continuing in interactive mode
+void confirm()
+{
+    std::cout << "Continue? [y/N]";
+    std::string yn;
+    std::cin >> yn;
+    // Any key other than 'y' or 'Y' will exit
+    if (yn.empty() || yn[0] != 'y' || yn[0] != 'Y') {
+        std::cout << "Exiting..." << std::endl;
+        exit(0);
+    }
+}
+
 // Main entry point
 
 int main(int argc, char* args[])
 {
-    // Parse args and complain if invalid
+    /****************************************************
+     * Parse and validate command line arguments
+     ****************************************************/
+
     options opts = parseArgs(argc, args);
 
     // Set up logging
-    log::setLogFormat(log::LogFormat::Tiny);
+    log::setLogFormat(log::LogFormat::NoLabel);
     log::setLogLevel(opts.verbose ? log::LogLevel::Info : log::LogLevel::Warning);
 
     // Debug options
@@ -151,7 +192,10 @@ int main(int argc, char* args[])
         mem::setAccessMethod(mem::AccessMethod::IO);
     }
 
-    // Find and attach to process
+    /****************************************************
+     * Find and attach to process
+     ****************************************************/
+
     pid_t pid = proc::waitForProcess([&opts]() {
         if (opts.pid > 0) {
             return opts.pid;
@@ -166,7 +210,7 @@ int main(int argc, char* args[])
     std::string processName;
 
     if (opts.pid > 0) {
-        processName = proc::getCmdline(pid);
+        processName = proc::getStatusName(pid);
     } else if (!opts.statusName.empty()) {
         processName = opts.statusName;
     } else if (!opts.cmdline.empty()) {
@@ -180,10 +224,10 @@ int main(int argc, char* args[])
 
     logInfo(std::format("Process ID:  {}", pid));
     logInfo(std::format("Status Name: {}", proc::getStatusName(pid)));
-    logInfo(std::format("Cmdline:     {}", proc::getCmdline(pid)));
+    logInfo(std::format("Cmdline:     {}\n", proc::getCmdline(pid)));
 
-    // If no pattern, then we're done
-    if (opts.pattern.empty()) {
+    // If no address or pattern, then we're done
+    if (opts.address < 0 && opts.pattern.empty()) {
         logInfo("No pattern specified, exiting");
         return 0;
     }
@@ -199,60 +243,137 @@ int main(int argc, char* args[])
 
     logInfo(std::format("Found and attached to {} ({})", processName, pid));
 
-    // Find the correct map for the actual executable, and read the PE headers
-    proc::Map map = proc::findMapEndsWith(pid, processName);
-    pe::PeMap peMap(map);
+    /****************************************************
+     * Find the process map and working region
+     ****************************************************/
 
-    if (!peMap.isValid()) {
-        logError("Failed to read PE headers");
+    proc::Map map = opts.map.empty()
+        ? proc::findMapEndsWith(pid, processName)
+        : proc::findMap(pid, opts.map);
+
+    if (!map.isValid()) {
+        logError("Failed to find map");
         return 1;
     }
 
-    if (opts.interactive) {
-        logInfo("Press any key to continue or Ctrl+C to exit...");
-        std::cin.get();
-    }
+    Region section;
 
-    // Find the section
-    Region section = peMap.getSection(opts.section);
+    // Allow reading the process map directly (useful for checking headers)
+    if (
+        (opts.section == "map" || opts.section == "header")
+        && opts.address >= 0 && opts.read >= 0
+    ) {
+        // This is a special case, and will ignore the pattern and offset and only allows read
+        section = map;
+
+    } else if (pe::isValidPE(map)) {
+        // Otherwise, check if process is PE and read the section
+        pe::PeMap peMap(map);
+
+        if (!peMap.isValid()) {
+            logError("Failed to read PE headers");
+            return 1;
+        }
+
+        section = peMap.getSection(opts.section);
+
+    } else if (elf::isValidElf(map)) {
+        // Otherwise, check if process is ELF (section is ignored)
+        elf::ElfMap elfMap(map);
+
+        if (!elfMap.isValid()) {
+            logError("Failed to read ELF headers");
+            return 1;
+        }
+
+        // ! IMPORTANT: ELF support is experimental, but will likely work for read operations
+        // ! Because of this, we are going to print a huge warning to the user and force interactive mode
+        if (!opts.patch.empty()) {
+            logWarning(
+                "Patching ELF memory regions is experimental and may cause crashes or data corruption!"
+                "\nProceed only if you are sure (switching to --interactive to confirm)"
+            );
+            opts.interactive = true;
+        }
+
+        section = elfMap.getLoadedRegion();
+
+    } else {
+        logError("Failed to read PE or ELF headers");
+        return 1;
+    }
 
     if (!section.isValid()) {
         logError(std::format("Failed to find section '{}'", opts.section));
         return 1;
     }
 
-    // Search for the pattern
-    Patch patch(section, opts.pattern, opts.offset, opts.patch);
+    /****************************************************
+     * Create the Patch object and perform the action
+     ****************************************************/
 
-    if (!patch.isValid()) {
-        logError("Pattern not found");
-        return 1;
+    if (opts.interactive) confirm();
+
+    if (opts.address >= 0 && opts.offset != 0) {
+        logWarning("Ignoring offset for specified address");
     }
 
-    // If no patch, print found pattern and exit
-    if (opts.patch.empty()) {
-        logInfo(std::format("Pattern search in region {}\n{}", patch.region().toString(), patch.dumpPattern()));
-        return 0;
-    }
+    Patch patch;
 
-    logInfo(patch.dump());
-
-    // if dry run, we're done
-    if (opts.dryRun) {
-        logInfo("Dry run, exiting");
-        return 0;
-    }
-
-    if (opts.interactive) {
-        logInfo("Press any key to apply the patch or Ctrl+C to exit...");
-        std::cin.get();
-    }
-
-    // Apply the patch
-    if (patch.apply()) {
-        logInfo(std::format("Patch applied\n{}", patch.dumpPatch()));
+    // Get the address from the pattern or use the specified address
+    if (opts.address >= 0) {
+        patch = Patch(section, opts.address, opts.patch);
     } else {
-        logError("Failed to apply patch");
+        patch = Patch(section, opts.pattern, opts.offset, opts.patch);
+
+        if (!patch.isValid()) {
+            logError("Pattern not found");
+            return 1;
+        }
+    }
+
+    if (opts.read >= 0) {
+        // if read, read and display the bytes
+        std::vector<uint8_t> data(opts.read);
+        if (patch.region().read(patch.address(), data.data(), data.size())) {
+            logInfo(std::format(
+                "Read {} bytes in region {}\n{}",
+                data.size(), patch.region().toString(),
+                hex::dump(data.data(), data.size(), patch.address())
+            ));
+        } else {
+            logError(std::format("Failed to read {} bytes at {:#x} in {}", opts.read, patch.address(), patch.region().toString()));
+            return 1;
+        }
+
+    } else if (!opts.patch.empty()) {
+        // if patch, display and apply the patch
+        logInfo(patch.dump());
+
+        // if dry run, we're done
+        if (opts.dryRun) {
+            logInfo("Dry run, exiting");
+            return 0;
+        }
+
+        // Confirm before continuing in interactive mode
+        if (opts.interactive) confirm();
+
+        // Apply the patch
+        if (patch.apply()) {
+            logInfo(std::format("Patch applied\n{}", patch.dumpPatch()));
+        } else {
+            logError("Failed to apply patch");
+            return 1;
+        }
+
+    } else {
+        // Nothing to do, just print some stuff
+        if (opts.address >= 0) {
+            logInfo(std::format("Address {:#x} in region {}", opts.address, patch.region().toString()));
+        } else {
+            logInfo(std::format("Pattern search in region {}\n{}", patch.region().toString(), patch.dumpPattern()));
+        }
     }
 
     return 0;

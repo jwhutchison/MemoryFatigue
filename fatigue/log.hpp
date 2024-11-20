@@ -35,6 +35,7 @@ namespace fatigue::log {
         Default,
         Compact,
         Tiny,
+        NoLabel,
     };
 
     void setLogFormat(LogFormat fmt);

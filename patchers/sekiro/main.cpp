@@ -209,7 +209,7 @@ int main(int argc, char* args[])
     options opts = parseArgs(argc, args);
 
     // Set up logging
-    log::setLogFormat(log::LogFormat::Tiny);
+    log::setLogFormat(log::LogFormat::NoLabel);
     log::setLogLevel(opts.verbose ? log::LogLevel::Info : log::LogLevel::Warning);
 
     // Debug options

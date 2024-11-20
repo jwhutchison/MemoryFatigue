@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(
     MemoryFatigue
-    VERSION 1.3.0
+    VERSION 1.4.0
     LANGUAGES CXX)
 
 set(FATIGUE_PATH fatigue)
