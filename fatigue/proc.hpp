@@ -31,7 +31,7 @@ namespace fatigue::proc {
         inline bool isPsuedo() const { return !perms.empty() && name.at(0) == '['; }
         inline bool isFile() const { return !isAnonymous() && !isPsuedo(); }
 
-        inline std::string toString()
+        inline std::string toString() const
         {
             return std::format("{:#x}-{:#x} {}{}{}{} {:#x} {} {} {}",
                                start, end,

@@ -12,6 +12,7 @@ struct options {
     std::string cmdline;
     std::string statusName;
     std::string map;
+    std::string showMaps;
 
     std::string section;
     long long address = -1;
@@ -37,6 +38,7 @@ options parseArgs(int argc, char* args[]) {
         TCLAP::ValueArg<std::string> cmdlineArg("c", "cmdline", "Find a process by cmdline (whole or part)", false, "", "string", cmd);
         TCLAP::ValueArg<std::string> statusNameArg("s", "status", "Find a process by status name", false, "", "string", cmd);
         TCLAP::ValueArg<std::string> mapArg("m", "map", "Find the process map by name (whole or part, if different from status name)", false, "", "string", cmd);
+        TCLAP::ValueArg<std::string> showMapsArg("", "show-maps", "List all process maps; filter by name, 'file', 'all'", false, "", "string", cmd);
 
         // Location options
         TCLAP::ValueArg<std::string> sectionArg("", "section", "Section name to search for pattern (default '.text')", false, ".text", "string", cmd);
@@ -83,6 +85,9 @@ options parseArgs(int argc, char* args[]) {
             TCLAP::ArgException err("Only one of PID, status, or cmdline can be specified", "pid/status/cmdline");
             out.failure(cmd, err);
         }
+
+        // If show-maps is specified, it's allowed to be empty (default 'file')
+        opts.showMaps = string::toLower(showMapsArg.getValue());
 
         // Locate and Action opts
         opts.section = string::toLower(sectionArg.getValue());
@@ -147,11 +152,12 @@ options parseArgs(int argc, char* args[]) {
 // Confirm before continuing in interactive mode
 void confirm()
 {
-    std::cout << "Continue? [y/N]";
+    std::cout << "Continue? [y/N] ";
     std::string yn;
-    std::cin >> yn;
+    std::getline(std::cin, yn);
+
     // Any key other than 'y' or 'Y' will exit
-    if (yn.empty() || yn[0] != 'y' || yn[0] != 'Y') {
+    if (yn.empty() || (yn[0] != 'y' && yn[0] != 'Y')) {
         std::cout << "Exiting..." << std::endl;
         exit(0);
     }
@@ -225,6 +231,48 @@ int main(int argc, char* args[])
     logInfo(std::format("Process ID:  {}", pid));
     logInfo(std::format("Status Name: {}", proc::getStatusName(pid)));
     logInfo(std::format("Cmdline:     {}\n", proc::getCmdline(pid)));
+
+    // If show maps, this is as far as we go
+    if (!opts.showMaps.empty()) {
+        if (opts.showMaps == "all") {
+            logInfo("Dumping all process maps, good luck!");
+            confirm();
+        } else if (opts.showMaps == "file") {
+            logInfo("Dumping process maps that are real files");
+        } else {
+            logInfo(std::format("Dumping process maps that contain '{}'", opts.showMaps));
+        }
+
+        for (auto &map : proc::getMaps(pid)) {
+            if (
+                opts.showMaps == "all"
+                || (opts.showMaps == "file" && map.isFile())
+                || map.name.contains(opts.showMaps)
+            ) {
+                std::cout
+                    << Color::Dim << std::format("{:#x}", map.start) << Color::Reset << "-"
+                    << Color::Dim << std::format("{:#x}", map.end) << Color::Reset << " ";
+
+                if (map.isRead()) std::cout << Color::Green << "r" << Color::Reset;
+                else std::cout << Color::Dim << "-" << Color::Reset;
+
+                if (map.isWrite()) std::cout << Color::Yellow << "w" << Color::Reset;
+                else std::cout << Color::Dim << "-" << Color::Reset;
+
+                if (map.isExec()) std::cout << Color::Cyan << "x" << Color::Reset;
+                else std::cout << Color::Dim << "-" << Color::Reset;
+
+                if (map.isPrivate()) std::cout << Color::Red << "p" << Color::Reset;
+                else std::cout << Color::Dim << "s" << Color::Reset;
+
+                std::cout << " "
+                    << Color::Blue << std::format("{:#x}", map.offset) << Color::Reset << " "
+                    << map.name << std::endl;
+            }
+        }
+
+        return 0;
+    } // end show maps
 
     // If no address or pattern, then we're done
     if (opts.address < 0 && opts.pattern.empty()) {

@@ -35,6 +35,10 @@ When invoking the command you can specify the following:
 - Actions (may choose one)
   - `--read` - Read and display this many bytes
   - `--patch` - Write the specified hex bytes (see warning)
+  - `--show-maps` - Show a list of process maps for the pid and exit; value can be 'file', 'all', or filter text
+                    If 'file', only maps associated with real files will be shown. If 'all', literally all
+                    maps, including psuedo and anonymous maps will be shown (you probably don't want this).
+                    Any other text will filter to show only maps with names containing that text.
 - Flags
   - `-d` or `--dry-run` - Will display information about the address and patch to be applied without actually writing it
   - `-i` or `--interactive` - Will prompt you to continue before searching and patching (gives you an opportunity to abort)
